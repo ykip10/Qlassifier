@@ -101,14 +101,14 @@ def print_tree(root):
 
 def main(argv: List[str] | None = None) -> int:
 	argv = argv or sys.argv[1:]
-	if not argv:
-		print("Usage: python process_doc.py path_to_word_doc.docx")
+	if not argv and len(argv) != 2:
+		print("Usage: python process_doc.py path_to_word_doc.docx search")
 		return 2
 	
 	path = argv[0]
+	search = argv[1]
 	headings = extract_headings(path)
 
-	search = "Units 3 and 4: Mathematical Methods"
 	res = find_heading(headings, search)
 	if not res:
 		print(f"Unable to find {search} in tree.")
