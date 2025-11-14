@@ -1,0 +1,1 @@
+This is a VCE exam question classifier based on NLP techniques. We use a transformers model to classify exam questions based on predetermined topics given by VCAA [study designs](https://www.vcaa.vic.edu.au/curriculum/vce-curriculum/vce-study-designs/vce-study-designs).

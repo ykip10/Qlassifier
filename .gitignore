@@ -1,0 +1,11 @@
+# ignore everything
+* 
+
+# 
+!src/
+!src/**
+
+#  
+!.gitignore
+!README.md
+!requirements.txt
