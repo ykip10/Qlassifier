@@ -7,12 +7,13 @@ Usage: python3 src/data_collection.py Subject_Name year1,year2,year3...
 
 import sys
 import os
-import requests
 import re
-from bs4 import BeautifulSoup
 from typing import List
 from urllib.parse import urljoin
 from itertools import product
+
+import requests
+from bs4 import BeautifulSoup
 
 VCAA_BASE = "https://www.vcaa.vic.edu.au"
 BASE_DIR = os.path.dirname(__file__)
@@ -22,6 +23,7 @@ def is_exam(subject, hypertext, years):
     (e.g. https://www.vcaa.vic.edu.au/assessment/vce/examination-specifications-past-examinations-and-examination-reports/mathematical-methods)
     contains an examination using VERY simple logic.
     '''
+
     res = (subject in hypertext) and ("exam" in hypertext or "examination" in hypertext) \
            and ("report" not in hypertext) and ("assessment" not in hypertext) and \
            any([str(year) in hypertext for year in years])
@@ -101,6 +103,7 @@ def extract_sds(subject:str):
 
     subject: Subject whose study design is to be extracted.  
     '''
+
     file_dir = os.path.join(BASE_DIR, "..", f"data/{subject.strip().lower().replace(" ", "_")}")
     os.makedirs(file_dir, exist_ok=True)
 

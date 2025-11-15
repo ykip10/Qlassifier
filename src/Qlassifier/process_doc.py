@@ -1,12 +1,16 @@
-''' Tools for processing word documents into trees by splitting on headers. 
+''' 
+General Tool for processing word documents into trees by splitting on headers. The data extracted
+is stored in an N-ary tree. Allows for search.
+
+Usage: python process_doc.py path_to_word.docx search
+search is an optional argument. 
 '''
 
 import sys
 from typing import List, Tuple
+
 from docx import Document
 
-# We store our headings in an N-ary tree structure, built in order 
-# of occurence in the input word document. 
 class Heading: 
 	def __init__(self, title: str, level: int):
 		self.title = title # Header title 
@@ -93,18 +97,20 @@ def print_tree(root):
 
 def main(argv: List[str] | None = None) -> int:
 	argv = argv or sys.argv[1:]
-	if not argv and len(argv) != 2:
+	if not argv or len(argv) > 2:
 		print("Usage: python process_doc.py path_to_word_doc.docx search")
 		return 2
 	
 	path = argv[0]
-	search = argv[1]
 	headings = extract_headings(path)
-
-	res = find_heading(headings, search)
-	if not res:
-		print(f"Unable to find {search} in tree.")
-		return 1
+	if len(argv == 2):
+		search = argv[1]
+		res = find_heading(headings, search)
+		if not res:
+			print(f"Unable to find {search} in tree.")
+			return 1
+	else: 
+		res = headings
 	print_tree(res)
 	return 0
 

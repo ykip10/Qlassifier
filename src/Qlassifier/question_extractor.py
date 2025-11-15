@@ -1,13 +1,19 @@
 '''
-This script aims to 
+We scan an input png document, then apply an OCR model for text recognition. 
+Optionally, produce an output of the image with the model's predictions.
+
+Usage: python3 src/question_extractor.py path_to_image
+Append with -s flag to save an annotated version of the image.
 '''
 
 import sys
 from pathlib import Path
 from typing import List, Tuple
+import time
+
 import easyocr
 from PIL import Image, ImageDraw, ImageFont
-import time
+
 
 class Section:
     def __init__(self):
@@ -22,10 +28,14 @@ class Question:
 
 
 def annotate_image(image_path: str, results: List[Tuple[List[Tuple[float, float]], str, float]]) -> str:
-    """Draw bounding boxes and text onto the image and save an annotated copy.
-
+    '''Draw bounding boxes and text onto the image and save an annotated copy.
     Returns the path to the annotated image.
-    """
+
+    image_path: Absolute path to image to be annotated. 
+    results:    Results from an OCR output which contains coordinates of text, the corresponding prediction, and it's 
+                confidence
+    '''
+
     img = Image.open(image_path).convert("RGB")
     draw = ImageDraw.Draw(img)
 
@@ -63,6 +73,7 @@ def run_ocr(image_path: str, annotate: bool) -> List[Tuple[str]]:
     image_path: Path of the image to be read. 
     annotate:   Boolean indicator flagging whether or not we should output an annotated image. 
     '''
+
     # Load and run the model, noting total runtime 
     start_time = time.perf_counter()
     reader = easyocr.Reader(["en"])
@@ -95,8 +106,7 @@ def process_ocr(ocr_result: List[str]):
 def main(argv: List[str] | None = None) -> int:
     argv = argv or sys.argv[1:]
     if not argv:
-        print("Usage: python3 src/ocr_display.py path_to_image")
-        print("Optionally, add -s to save an annotated version of the image.")
+        print(__doc__)
         return 2
 
     annotate = False
