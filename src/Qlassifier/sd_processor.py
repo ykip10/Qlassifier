@@ -28,21 +28,17 @@ def extract_headings(path: str) -> List[Tuple[int, str]]:
 	
 	headings = []
 	root = Heading("root", level=0)
-
-	# First build the headings
+	# First, build the headings
 	curr = None
 	for p in doc.paragraphs:
 		style_name = getattr(p.style, "name", "") or ""
 		text = p.text.strip()
-
 		if not text:
 			continue
-		
 		if "heading" in style_name.lower():
 			# In word formatting, typically we have styles of the form "Heading 2"
 			# The "Heading" word implies its a heading font. The number displays 
 			# the hierarchy.
-
 			parts = style_name.split()
 			for part in parts[::-1]:
 				# Extract number
@@ -55,20 +51,16 @@ def extract_headings(path: str) -> List[Tuple[int, str]]:
 			if curr: 
 				curr.text += text + " "
 
-	# Now we sort out the hierarchical tree structure
-	def add_children(root, headings):
-		''' Finds the subchildren for each node and organises headings list 
-		into a tree structure using a stack-based algorithm. 
-		'''
-		stack = [root]
-		for node in headings:
-			# Pop until we find a parent of lower level
-			while stack and stack[-1].level >= node.level:
-				stack.pop()
-			stack[-1].sub_headings.append(node)
-			stack.append(node)
-
-	add_children(root, headings)
+	# Now we sort out the hierarchical tree structure by finding 
+	# the subchildren for each node and organising headings list 
+	# into a tree structure using a stack.
+	stack = [root]
+	for node in headings:
+		# Pop until we find a parent of lower level
+		while stack and stack[-1].level >= node.level:
+			stack.pop()
+		stack[-1].sub_headings.append(node)
+		stack.append(node)
 	return root
 
 

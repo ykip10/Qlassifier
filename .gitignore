@@ -1,11 +1,12 @@
 # ignore everything
 * 
 
-# 
+# Add main src 
 !src/
 !src/**
 
-#  
+
+# Add repo related files 
 !.gitignore
 !README.md
 !requirements.txt

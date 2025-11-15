@@ -1,9 +1,24 @@
+'''
+This script aims to 
+'''
+
 import sys
 from pathlib import Path
 from typing import List, Tuple
 import easyocr
 from PIL import Image, ImageDraw, ImageFont
 import time
+
+class Section:
+    def __init__(self):
+        self.questions = [] # Questions belonging to this section sorted by qn number
+        self.label = '' # Section label; e.g. "A" for "Section A."
+
+
+class Question: 
+    def __init__(self):
+        self.sub_questions = [] # part a), b) etc. 
+        self.text = '' 
 
 
 def annotate_image(image_path: str, results: List[Tuple[List[Tuple[float, float]], str, float]]) -> str:
@@ -27,8 +42,8 @@ def annotate_image(image_path: str, results: List[Tuple[List[Tuple[float, float]
         # place text above top-left corner if possible
         x0, y0 = xy[0]
         label = f"{text} ({conf:.2f})"
+
         # black box for readability
-        
         tb = draw.textbbox((0, 0), label, font=font)
         text_width = tb[2] - tb[0]
         text_height = tb[3] - tb[1]
@@ -42,18 +57,22 @@ def annotate_image(image_path: str, results: List[Tuple[List[Tuple[float, float]
     return out_path
 
 
-def run_ocr(image_path: str, annotate: bool):
+def run_ocr(image_path: str, annotate: bool) -> List[Tuple[str]]:
     ''' Runs easyOCR on the image at image_path. 
 
     image_path: Path of the image to be read. 
     annotate:   Boolean indicator flagging whether or not we should output an annotated image. 
     '''
+    # Load and run the model, noting total runtime 
     start_time = time.perf_counter()
     reader = easyocr.Reader(["en"])
     results = reader.readtext(image_path, detail=1)  # list of (bbox, text, conf)
     end_time = time.perf_counter()
 
+    # Extract & print just the text + confidence
+    text_lst = []
     for bbox, text, conf in results:
+        text_lst.append(text)
         print(f'{text} (conf={conf})')
 
     # Annotate and save image
@@ -62,8 +81,18 @@ def run_ocr(image_path: str, annotate: bool):
         print(f"Annotated image written to: {out}")
     print(f"OCR runtime: {end_time-start_time}.")
 
+    return text_lst
 
-def main(argv=None) -> int:
+
+def process_ocr(ocr_result: List[str]):
+    ''' Processes ocr output to organise text into Section and Question objects. 
+
+    ocr_result: List containing text to be processed. 
+    '''
+    ocr_result.join()
+
+
+def main(argv: List[str] | None = None) -> int:
     argv = argv or sys.argv[1:]
     if not argv:
         print("Usage: python3 src/ocr_display.py path_to_image")
@@ -84,8 +113,8 @@ def main(argv=None) -> int:
         print(f"Image not found: {image_path}")
         return 1
 
-    run_ocr(image_path, annotate)
-
+    res = run_ocr(image_path, annotate)
+    print(" ".join(res))
     return 0
 
 
