@@ -3,7 +3,8 @@
 
 # Add main src 
 !src/
-!src/**
+!src/Qlassifier
+!src/Qlassifier/**
 
 
 # Add repo related files 

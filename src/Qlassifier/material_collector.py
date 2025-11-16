@@ -10,7 +10,6 @@ import os
 import re
 from typing import List
 from urllib.parse import urljoin
-from itertools import product
 
 import requests
 from bs4 import BeautifulSoup
@@ -18,7 +17,7 @@ from bs4 import BeautifulSoup
 VCAA_BASE = "https://www.vcaa.vic.edu.au"
 BASE_DIR = os.path.dirname(__file__)
 
-def is_exam(subject, hypertext, years):
+def is_exam(subject: str, hypertext: str, years: List[int]) -> bool: 
     ''' Classify whether or not a hypertext link from a VCAA subject past examinations page 
     (e.g. https://www.vcaa.vic.edu.au/assessment/vce/examination-specifications-past-examinations-and-examination-reports/mathematical-methods)
     contains an examination using VERY simple logic.
@@ -137,8 +136,8 @@ def main(argv: List[str] | None = None) -> int:
     if not argv or len(argv) > 2:
         print(__doc__)
         return 2
-    subject, years = argv
     
+    subject, years = argv
     years = years.split(",")
 
     # Standardise subject_name to Subject Name.
