@@ -1,11 +1,11 @@
 ''' 
-Tools for processing study designs (as word documents) and examination papers (as text-embedded PDF documents)
+Tools for parsing study materials (study designs as word documents, examination papers as text-embedded PDF documents)
 and sorting text into hierarchies based on headings. For word documents the process works in general, 
 but for PDF documents the output only makes sense if it is a vcaa past examination. Supports exact search.
 
 Usage: 
-	python3 study_material_parser.py path_to_document			 # Prints word doc as a tree 
-	python3 study_material_parser.py path_to_document [target]   # Searches for 'target' heading, prints subtree
+	python3 material_parser.py path_to_document			   # Prints word doc as a tree 
+	python3 material_parser.py path_to_document [target]   # Searches for 'target' heading, prints target subtree
 '''
 
 import sys
@@ -19,12 +19,13 @@ import trees
 import pymupdf
 from docx import Document
 
-QN_HIERARCHIES_REGEX = [    # question splits, ordered by increasing levels of hierarchy 
-    r"SECTION \d", 		# level 1
-    r"Question \d+",	# level 2
-    r"[a-z]\.",			# level 3
-    r"i+.",				# level 4
+QN_HIERARCHIES_REGEX = [    	# question splits, ordered by increasing levels of hierarchy 
+    r"^S(?i:ection) [A-Z]", 	# level 1
+    r"Question \d+",			# level 2
+    r"[a-h]\.",					# level 3
+    r"i+\.",					# level 4
 ]
+
 
 def extract_headings(path: str) -> List[Tuple[int, str]]:
 	''' Return a list of (level, text) for headings found in the document. 
@@ -43,8 +44,10 @@ def extract_headings(path: str) -> List[Tuple[int, str]]:
 	for p in doc.paragraphs:
 		style_name = getattr(p.style, "name", "") or ""
 		text = p.text.strip()
+
 		if not text:
 			continue
+
 		if "heading" in style_name.lower():
 			# In word formatting, typically we have styles of the form "Heading 2"
 			# The "Heading" word implies its a heading font. The number displays 
@@ -57,20 +60,23 @@ def extract_headings(path: str) -> List[Tuple[int, str]]:
 					break
 			curr = trees.Tree(label=text, level=level)
 			headings.append(curr)
-		else: 
-			if curr: 
-				curr.text += " " + text
+		elif curr: 
+			curr.text += " " + text
 
-	# Build the tree then retunr
+	# Build the tree then return
 	root = trees.Tree(label="root", level=0)
 	root.build(headings)
 	return root
 
 
-def process_pdf(path):
+def process_pdf(path, final_page):
 	''' Extracts text from pymupdf Document object and sorts them into Sections and Questions.
 	Goes through bolded text as candidates for splitting, then checks if the bolded text are 
 	valid question splits. Sorts extracted text into a Tree object and returns it. 
+	The assumption is that new questions are lablled according to the predefined QN_HIERARCHIES. 
+
+	- path: Path of pdf
+	- final_page: Index of the last page to be processed
 	'''
 	try: 
 		pdf = pymupdf.open(path)
@@ -80,20 +86,32 @@ def process_pdf(path):
 
 	curr = None
 	nodes = []
-	for page in pdf[1:]: # Skip first page (cover page)
-		txt_bold_lst = pdf_utils.extract_text_and_bold(json.loads(page.get_text("json")))
-		for text, is_bold in txt_bold_lst:
+	page_idx = 0
+	while page_idx < len(pdf[:final_page]): 
+		page = pdf[page_idx]
+		txt_props_lst = pdf_utils.get_text_and_style(json.loads(page.get_text("json")))
+
+		# Extract questions and their text from this page 
+		for text, is_bold, y0 in txt_props_lst:
 			if is_bold:
-				# question split candidate
+				# possible question split candidate
 				matches = [bool(re.match(pattern, text)) for pattern in QN_HIERARCHIES_REGEX]
 				if any(matches):
-						# Found question split
-						if curr: 
-							nodes.append(curr)
-						curr = trees.Tree(label=text, level=matches.index(True)+1)
-						continue
-			if curr:
+					# Initialise new node
+					curr = trees.Tree(label=text, level=matches.index(True)+1)
+					nodes.append((curr, page_idx, y0))
+			elif curr:
+				# ordinary text
+				mark_match = re.search(r"(\d+)\s*marks?", text)
+				if mark_match and not curr.marks:
+					curr.marks = int(mark_match.group(1))
 				curr.text += " " + text
+		
+		page_idx += 1
+	
+	# sort by page then vertical height to get correct ordering  
+	nodes.sort(key=lambda t: (t[1], t[2]))  # sort by page_num, y0
+	nodes = [text for text, page_num, y0 in nodes] 
 
 	root = trees.Tree(label="root", level=0)
 	root.build(nodes)
@@ -111,8 +129,11 @@ def main(argv: List[str] | None = None) -> int:
 	
 	if file_extension == ".docx":
 		root = extract_headings(path)
+		root.filter_tree(r"Area of Study \d")
 	elif file_extension == ".pdf":
-		root = process_pdf(path)
+		final_page = pdf_utils.find_final_page(path)
+		path = pdf_utils.crop_pdf(path)
+		root = process_pdf(path, final_page=final_page)
 	else: 
 		print("Unsupported file type. Only parses word documents/PDFs.")
 		return 1

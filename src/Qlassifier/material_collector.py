@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup
 VCAA_BASE = "https://www.vcaa.vic.edu.au"
 BASE_DIR = os.path.dirname(__file__)
 
+
 def is_exam(subject: str, hypertext: str, years: List[int]) -> bool: 
     ''' Classify whether or not a hypertext link from a VCAA subject past examinations page 
     (e.g. https://www.vcaa.vic.edu.au/assessment/vce/examination-specifications-past-examinations-and-examination-reports/mathematical-methods)
@@ -36,8 +37,17 @@ def extract_exams(subject: str, years: List[int]) -> int:
     subject: Exact subject name of the VCE/VET subject whose past examinations are to be scraped. 
     years:   Examination years to extract.
     '''
+    # Standardise subject input to "Subject Name".
+    subject = subject.lower().replace("_", " ")
+    subject = subject.replace(subject[0], subject[0].upper(), 1)   
+    if " " in subject:
+        idx = subject.index(" ") + 1
+        subject = subject[:idx] + subject[idx].upper() + subject[idx+1:] 
 
-    file_dir = os.path.join(BASE_DIR, "..", f"data/{subject.strip().lower().replace(" ", "_")}")
+    print(subject)
+    
+    file_dir = os.path.join(BASE_DIR, "..", "data", subject.strip().l
+    ower().replace(" ", "_"))
 
     url = VCAA_BASE + "/assessment/vce/" \
           "examination-specifications-past-examinations-and-examination-reports/" \
@@ -97,7 +107,7 @@ def extract_exams(subject: str, years: List[int]) -> int:
     return 0 
 
 
-def extract_sds(subject:str):
+def extract_sds(subject: str):
     ''' Extracts latest study designs from the VCAA website using Beautiful Soup.
 
     subject: Subject whose study design is to be extracted.  
@@ -109,14 +119,14 @@ def extract_sds(subject:str):
     url = "https://www.vcaa.vic.edu.au/curriculum/vce-curriculum/vce-study-designs/vce-study-designs"
     headers = {"User-Agent": "Mozilla/5.0"} # Need header to extract from VCAA 
     
-    # Get to subject page
+    # Get to subject curriculum page
     html = requests.get(url, headers=headers).text
     soup = BeautifulSoup(html, "html.parser")
     for a in soup.find_all("a", href=True):
         pattern = r"/curriculum/.+/" + f"{subject.strip().lower().replace(" ", "-")}" + r"/.+"
         if re.match(pattern, a["href"]):
             full_url = urljoin(url, a["href"])
-    print(full_url)
+    
     # Extract study design 
     html = requests.get(full_url, headers=headers).text
     soup = BeautifulSoup(html, "html.parser")
@@ -139,13 +149,6 @@ def main(argv: List[str] | None = None) -> int:
     
     subject, years = argv
     years = years.split(",")
-
-    # Standardise subject_name to Subject Name.
-    subject = subject.replace("_", " ")
-    subject = subject.replace(subject[0], subject[0].upper(), 1)
-    if " " in subject:
-        idx = subject.index(" ") + 1
-        subject = subject[:idx] + subject[idx].upper() + subject[idx+1:]
 
     if extract_exams(subject, years): 
         return 1

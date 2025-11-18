@@ -5,9 +5,12 @@
 !src/
 !src/Qlassifier
 !src/Qlassifier/**
-
+!src/EDA.ipynb
 
 # Add repo related files 
 !.gitignore
 !README.md
 !requirements.txt
+
+# Ignore python byte-code
+__pycache__/

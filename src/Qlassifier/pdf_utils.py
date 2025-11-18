@@ -6,8 +6,13 @@
 
 from typing import List, Tuple, Optional
 import os
+import json
+import re
 
 import pymupdf
+
+FOOTER_PC = 0.15 # Bottom percentage of the pdf which contains the footer. 
+
 
 def is_scanned(pdf_path: str) -> bool:
     ''' Checks if the pdf is scanned by searching for any embedded text. Returns 
@@ -52,14 +57,24 @@ def pdf_to_png(pdf_path, output_dir: Optional[str] = None, dpi: int = 150) -> Li
     return out_paths
 
 
-def crop_pdf(pdf_path: str, new_coords: Tuple[int], output_path: Optional[str] = None) -> str:
-    '''Crop each page of `pdf_path` by removing the given amounts from the
-    left, top, right and bottom edges. Values are assumed to be in PDF
-    points (pt) — the standard unit used by PDFs (1 pt = 1/72 inch).
+def crop_pdf(pdf_path: str, new_coords: Tuple[int] = None, output_path: Optional[str] = None) -> str:
+    '''Crop each page of `pdf_path` by specifiying the coordinates of the crop box to be applied. 
 
     Returns the path to the saved cropped PDF (does not modify the input file
     unless `output_path` points to the same location).
+
+    pdf_path:    Path of pdf to be cropped.
+    new_coords:  Coordinates of cropping box to be applied. If empty, does automatic cropping based 
+                 on size of the first page of the PDF.
+    output_path: Where to save the cropped PDF. If empty, saves in same directory as the orignal.  
     '''
+    pdf = pymupdf.open(pdf_path)
+
+    if new_coords is None: 
+        page0 = pdf[0]
+        w, h = page0.rect.width, page0.rect.height
+        new_coords = (w * 0.07, h * 0.04, w * 0.93, (1-FOOTER_PC)*h)  # 
+
     if output_path is None:
         base = os.path.splitext(os.path.basename(pdf_path))[0]
         output_dir = os.path.dirname(os.path.abspath(pdf_path)) or os.getcwd()
@@ -69,14 +84,14 @@ def crop_pdf(pdf_path: str, new_coords: Tuple[int], output_path: Optional[str] =
     if x0 >= x1 or y0 >= y1: 
         raise ValueError(f"Please input valid cropping coordinates.")
 
-    doc = pymupdf.open(pdf_path)
-    for page in doc:
+    
+    for page in pdf:
         new_rect = pymupdf.Rect(x0, y0, x1, y1)
         # set the crop box so the visible area is reduced
         page.set_cropbox(new_rect)
 
-    doc.save(output_path)
-    doc.close()
+    pdf.save(output_path)
+    pdf.close()
     return output_path
 
 
@@ -93,8 +108,40 @@ def span_is_bold(span: dict) -> bool:
     return (flags & 16) != 0 or ("bold" in font)
 
 
-def extract_text_and_bold(page_json: dict):
-    ''' Given a parsed page.get_text("json") dict, return a list of (text, is_bold) tuples.
+def is_latex(span: dict) -> bool:
+    ''' Checks if a PyMuPdf span points to a LaTeX formatted object. 
+    '''
+    font = (span.get("font") or "").lower()
+    return any(k in font for k in ["cm", "cmsy", "cmex", "stix", "symbol"])
+
+
+def find_final_page(path: str) -> int:
+    ''' Find the final examination page by scanning through the footers 
+    and looking for an 'end of examination' flag. Input should be uncropped. 
+    '''
+    try: 
+        pdf = pymupdf.open(path)
+    except Exception: 
+        print(f"Error loading pdf \'{path}\'")
+        return None
+    
+    for page_idx in range(len(pdf)):
+        page = pdf[page_idx]
+        w, h = page.rect.width, page.rect.height
+        new_rect = pymupdf.Rect(0, (1-FOOTER_PC)*h, w, h)
+        page.set_cropbox(new_rect)
+        footer_props_lst = get_text_and_style(json.loads(page.get_text("json")))
+        for text, _, _, in footer_props_lst:
+            pattern = r"(?i)^end of (?:\w+\s+)*(questions?|answer|book|examination)\b"
+            if re.match(pattern, text):
+                print("\n\n HIIIIIIIIII\n\n")
+                return page_idx
+            
+    return page_idx
+
+
+def get_text_and_style(page_json: dict) -> Tuple[str, bool, bool, int]:
+    ''' Given a parsed page.get_text("json") dict, return a list of (text, is_bold, is_latex) tuples.
     '''
     out = []
     for block in page_json.get("blocks", []):
@@ -103,5 +150,8 @@ def extract_text_and_bold(page_json: dict):
             continue
         for line in block.get("lines", []):
             for span in line.get("spans", []):
-                out.append((span.get("text", ""), span_is_bold(span)))
+                text = span.get("text", "")
+                bold = span_is_bold(span)
+                y0 = span.get("bbox", [0, 0, 0, 0])[1]  # top y-coordinate
+                out.append((text, bold, y0))
     return out
