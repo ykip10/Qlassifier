@@ -1,25 +1,42 @@
-''' Contains definitions for tree structures which we use to store
-most data.
-'''
-from typing import List
+""" Contains definitions for tree structures which we use to store
+most data. Trees support label search, filtering, printing, and other functions 
+for processing data in the tree format. Node labels in the object definition 
+are synonomous to the header titles from the documents from which the trees are built. 
+"""
+from typing import Self
 import re
 
-class Tree: 
+
+class Tree:
+    """ Trees contain data on all processed documents in this project. 
+    The attributes of a tree are:
+
+    label   : Title of the node. if the node represents a question, this would include the question number
+    level   : Distance from the root node
+    children: Immediate child nodes
+    parent  : Parent node
+    text    : Text directly underneath the header, from whatever document the tree was processed from 
+    marks   : If the node represents a question, this stores the number of marks available in the question. Otherwise, it is 0. 
+    """
     def __init__(self, label: str, level: int):
-        self.label = label 
-        self.level = level  # Distance from root
-        self.text = ''      # Text directly underneath header
-        self.marks = 0      # If the node is a question, stores the amount of marks in the question
+        """ Initialises Tree object. 
+
+        label: Title of the node.
+        level: Distance from the tree root. 
+        """
+        self.label = label
+        self.level = level
         self.children = []
-        self.parent = None
+        self.parent = None                               # Distance from root
+        self.text = ""          # Text directly underneath header 
+        self.marks = 0          # If the node references a question, stores the number of marks. 
 
-
-    def build(self, nodes: List["Tree"]):
-        ''' Builds the tree from a list nodes. Nodes must be structured such that 
+    def build(self, nodes: list[Self]):
+        """ Builds the tree from a list nodes. Nodes must be structured such that 
         each child of a node appears directly after it and before the next sibling node.
 
         Uses a simple stack-based algorithm.
-        '''
+        """
         stack = [self]
         for node in nodes:
 	    	# Pop until we find a parent of lower level
@@ -29,48 +46,35 @@ class Tree:
             stack[-1].children.append(node)
             stack.append(node)
 
-
-    def label_search(self, target: str) -> "Tree":
-        ''' Searches tree for a child node with label==target using depth-first search (dfs). 
+    def label_search(self, pattern: str) -> Self:
+        """ Searches tree for a child node with a regex match between the pattern and the node label using depth-first search (dfs). 
         Returns None if no match was found. 
-        '''
-        if self.label == target: return self
+        """
+        if re.match(pattern, self.label):
+            return self
 
         for node in self.children:
-            found = node.label_search(target)
-            if found: return found
+            found = node.label_search(pattern)
+            if found: 
+                return found
 
         return None
-    
 
-    def print_tree(self, hide_text=False):
-        ''' We implement a dfs to print the tree in a manner 
-        which makes hierarchy clear. 
-        ''' 
+    def print_tree(self, hide_text: bool = False):
+        """ We implement a dfs to print the tree in a manner which makes hierarchy clear. """
         indent = "    " * max(0, self.level-1)
-
         print(f"{indent} [{self.level}]: {self.label}\n")
         if not hide_text:
-            (f"Text: {self.text:>{len(indent)}}"+ (f" ({self.marks} marks)" if self.marks else ""))
+            print(f"Text: {self.text:>{len(indent)}}"+ (f" ({self.marks} marks)" if self.marks else ""))
         
         for node in self.children:
             node.print_tree()
 
-
-    def delete_node(self):
-        ''' Deletes a node and all its subchildren from the tree. If called on the root, 
-        function will not do anything. 
-        '''
-        if self.parent: 
-            self.parent.children.remove(self)
-    
-
-    def filter_tree(self, pattern): 
-        ''' Goes through the tree and only keeps the branches which contain a node with a
-        label that match the input regex pattern. Uses bottom-up approach.
-        '''
+    def filter_tree(self, pattern: str) -> bool: 
+        """ Goes through the tree and only keeps the branches which contain a node with a
+        label that match the input regex pattern. Edits the tree in-place. 
+        """
         keep = bool(re.search(pattern, self.label))
-
         if keep:
             return True
         
@@ -85,4 +89,22 @@ class Tree:
 
         # keep this node if it matches, or if any of it's children match. 
         return bool(self.children)
-        
+
+    def find_qn_level(self, qn_regex: str = r".?(Q|q)uestion.?") -> int:
+        """ Finds the level in the tree which are labelled by the word question. """
+        return self.label_search(qn_regex).level
+
+    def get_nodes_at_level(self, level: int) -> list[Self]:
+        """ Returns a list of nodes belonging to the specified level."""
+        out = []
+        # Implement breadth first search 
+        queue = [self]
+        while queue:
+            node = queue.pop(0)
+            for child in node.children:
+                queue.append(child)
+            if node.level == level:
+                out.append(node)
+            elif node.level > level: 
+                return out
+        return out 
