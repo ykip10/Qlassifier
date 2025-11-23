@@ -9,50 +9,49 @@ Usage:
 	python3 -m src.Qlassifier.visualise_parsing path_to_document [target]   	# Searches for 'target' heading, prints target subtree
 	python3 -m src.Qlassifier.visualise_parsing path_to_document --show-report  # Processes the document as a report, shows dictionary output.
 """
-
 import sys
 from pathlib import Path
 
-from pprint import pprint
+import pandas as pd
 
 from src.Qlassifier.report_processor import ReportProcessor
-from src.Qlassifier.word_parser import WordParser
-from src.Qlassifier.pdf_parser import PDFParser
+from src.Qlassifier.parsers import PDFParser, WordParser
 
 def main(argv: list[str] | None = None) -> int:
+	""" Executes program. """
 	argv = argv or sys.argv[1:]
 	if not argv or len(argv) > 2:
 		print(__doc__)
 		return 2
-
+	
 	path = argv[0]
 	file_extension = Path(path).suffix
-
-	if file_extension == ".docx":
-		parser = WordParser(path)
-		root = parser.split_headings()
-		root.filter_tree(r"(Q|q)uestion \d.?")
-	elif file_extension == ".pdf":
-		parser = PDFParser(path, footer_pc=0.15)
-		root = parser.split_headings()
-	else: 
-		print("Unsupported file type. Only parses word documents/PDFs.")
-		return 1
-
-	if root is None:
-		return 1
-
-	if len(argv) == 2:
-		if argv[1] == "--show-report":
-			pprint(ReportProcessor(path, ext=file_extension).parse_tables())
-			return 0 
+	
+	if len(argv) == 1:
+		if file_extension == ".docx":
+			parser = WordParser(path)
+			root = parser.split_headings()
+			root.filter_tree(r"(Q|q)uestion \d.?")
+		elif file_extension == ".pdf":
+			parser = PDFParser(path, footer_pc=0.15)
+			root = parser.split_headings()
+		else: 
+			print("Unsupported file type. Only parses word documents/PDFs.")
+			return 1
+		root.print_tree()
+		return 0
+	if argv[1] != "--show-report":
 		# Need to execute search 
 		target = argv[1]
 		root = root.label_search(target)
 		if not root:
 			print(f"Unable to find {target} in tree.")
 			return 1
-	root.print_tree()
+		root.print_tree()
+		return 0 
+	
+	# Need to show report
+	print(ReportProcessor(path).parse_tables()[1])
 	return 0
 
 

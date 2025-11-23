@@ -18,18 +18,30 @@ class Tree:
     text    : Text directly underneath the header, from whatever document the tree was processed from 
     marks   : If the node represents a question, this stores the number of marks available in the question. Otherwise, it is 0. 
     """
-    def __init__(self, label: str, level: int):
+    def __init__(
+            self, 
+            label: str, 
+            level: int,
+            page_idx: int = None, 
+            height: float = None
+            ):
         """ Initialises Tree object. 
 
-        label: Title of the node.
-        level: Distance from the tree root. 
+        label   : Title of the node.
+        level   : Distance from the tree root. 
+        page_idx: Which page the label was found (
+        height  : Label height on page
         """
         self.label = label
         self.level = level
         self.children = []
         self.parent = None                               # Distance from root
         self.text = ""          # Text directly underneath header 
-        self.marks = 0          # If the node references a question, stores the number of marks. 
+        self.marks = 0          # If the node references a question, stores the number of marks.
+
+        # page num and height of label, if applicable
+        self.page_idx = page_idx
+        self.height = height
 
     def build(self, nodes: list[Self]):
         """ Builds the tree from a list nodes. Nodes must be structured such that 
