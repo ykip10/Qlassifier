@@ -178,6 +178,7 @@ class PDFParser(Parser):
         return page_idx
 
 
+
 class WordParser(Parser):
     """ Word parser object. Supports the splitting of word 
     documents into tree objects based on headers. 

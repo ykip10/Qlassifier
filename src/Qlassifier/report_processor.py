@@ -84,14 +84,16 @@ class ReportProcessor:
 		""" See parse_tables. This function assumes the report being parsed is a word doc."""
 		results = []
 		for table in self.parser.doc.tables:
+			# as long as there are more than 2 rows in the table, its
 			top_left_text = table.rows[0].cells[0].text.strip().lower()
-			if top_left_text == "question":
+			mcq = len(table.rows) > 2 or top_left_text == "question" \
+				  or top_left_text == "" 
+			if mcq: 
 				if not self._parse_word_table(table, curr=results, mcq=True):
 					print("Error parsing mcq questions from report.")
 					return 
 			elif top_left_text == "marks":
 				# We are now short in the answer portion of the report
-				# 
 				if not self._parse_word_table(table, curr=results, mcq=False):
 					print("Error parsing short-answer questions from report.")
 					return
@@ -168,7 +170,7 @@ class ReportProcessor:
 	def _arrange_tables(dfs: list[pd.DataFrame]) -> list[pd.DataFrame]:
 		""" Merges list of dfs results so that all tables with comments 
 		are grouped together. If no tables with comments (no mcq questions)
-		then leaves dfs unmodified.. 
+		then leaves dfs unmodified.
 		"""
 		# want to avoid iterative concatenating,
 		# find end of mcq section

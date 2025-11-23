@@ -51,7 +51,7 @@ def main(argv: list[str] | None = None) -> int:
 		return 0 
 	
 	# Need to show report
-	print(ReportProcessor(path).parse_tables()[1])
+	print(ReportProcessor(path).parse_tables()[0])
 	return 0
 
 

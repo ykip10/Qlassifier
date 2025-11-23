@@ -1,12 +1,11 @@
 from pathlib import Path
 
-
 import pymupdf
 import pandas as pd
-from gmft_pymupdf import PyMuPDFDocument
-from gmft.auto import AutoTableFormatter, AutoTableDetector
+from img2table.document import PDF
+from img2table import ExtractedTable
 
-import time
+
 def crop(doc: pymupdf.Document, 
          cr_coords: tuple[int], 
          save_path: str = "") -> pymupdf.Document:
@@ -45,7 +44,7 @@ def crop(doc: pymupdf.Document,
 def get_tables(
     path: str,
     pages: list[int] = None
-) -> list[pd.DataFrame]:
+) -> dict[int, list[ExtractedTable]]:
     """ Extracts tables from the PDF at path which are assumed to be 
     mark distribution tables at the given pages as a list of pandas dataframes.
     Performs some post-processing.
@@ -54,73 +53,59 @@ def get_tables(
     pages           : pages of pdf to get tables from. If None, gets all tables.
 
     """
-    detector = AutoTableDetector()
-    formatter = AutoTableFormatter()
+    pdf = PDF(path, 
+              pages=pages,
+              detect_rotation=False,
+              pdf_text_extraction=True)
 
-    tables = [] # list[CroppedTable], see gmft 
-    page_idxs = []
+    extracted_tables = pdf.extract_tables(implicit_rows=False,
+                                          implicit_columns=False,
+                                          borderless_tables=False,
+                                          min_confidence=50)
+                                          
+    return extracted_tables
 
-    doc = PyMuPDFDocument(path)
-    if pages is None: 
-        pages = range(len(doc))
+
+def preprocess_table(
+    tables: dict[int, list[ExtractedTable]],
+    pages: list[int]
+) -> pd.DataFrame:
+    """ Returns merged mcq tables and the page index where short answer questions begin. """
+    mcq_dfs = []
+
+    def df_is_mcq(df: pd.DataFrame) -> bool:
+        """ Returns True if the dataframe follows the structure of an MCQ report table,
+        which typically have more than two rows and can contain empty values in the middle
+        columns, where SA tables can not. """
+        nrow = df.shape[0]
+        middle_cols_df = df[df.columns[-1:1]]
+        return nrow > 2 or any(middle_cols_df.isna())
     
-    for page_idx in pages:
-        page = doc[page_idx]
-        extracted = detector.extract(page)
-        tables += extracted
-        page_idxs.append((page_idx, len(extracted)))
 
-    dfs = [formatter.extract(table).df() for table in tables]
-    doc.close()
+    # assuming mcq comes first 
+    for page_num in pages:
+        page_tables = tables[page_num]
+        for table in page_tables:
+            df = table.df
+            if df_is_mcq(df):
+                mcq_dfs.append(df)
 
-    # Perform some post-processing
-    def fix_index(df: pd.DataFrame, index: int) -> pd.DataFrame:
-        """ The detection and formatting process often collapses 
-        two adjacent rows into one. This function fixes these 
-        concatenation issues by splitting the concatenated row into two. 
-        """
-        concatd_vals = df.iloc[index].values[:-1] # Exclude comments column
+    colnames = list(mcq_dfs[0].loc[0]) # First row of first df contains column names 
+    mcq_dfs[0] = mcq_dfs[0].drop(index=0)
 
-        # Separate concatenated column into two 
-        sepd_strs = [unseparated_str.split() for unseparated_str in concatd_vals] # separated strings
-        str1_lst = []
-        str2_lst = []
-        for sepd_str in sepd_strs:
-            str1_lst.append(sepd_str[0])
-            str2_lst.append(sepd_str[1])
+    if colnames[-1] is None:
+        colnames[-1] = "comments"
 
-        # Add in value for comments column. It is probable that 
-        # the concatenation would not have
-        # occurred given the comments column were occupied,
-        # but it is nonetheless possible we are losing information here. 
-        str1_lst += [None]
-        str2_lst += [None]
+    for idx, df in enumerate(mcq_dfs):
+        df.columns = colnames
+        mcq_dfs[idx] = df
 
-        # insert split strings into correct position
-        df.loc[index] = str1_lst
-        df.loc[index+0.5] = str2_lst
+    merged = pd.concat(mcq_dfs).reset_index(drop=True)
+    none_idx = merged.index[merged[colnames[0]].isna()]
+    for idx in none_idx: 
+        comment = merged.loc[idx]["comments"]
+        merged.loc[idx-1, "comments"] += " " + comment
 
-        # Finally re-sort index
-        df = df.sort_index().reset_index().drop(columns=["index"])
-        return df
-          
-    for i, df in enumerate(dfs):        
-        # Index 1 is guaranteed to have a "mark" value 
-        # (since indices 0 and -1 are the only non mark columns)
-        # which should just be one number, if no concatenation 
-        # issues occurred. 
-        mark_col = df.columns[1] 
-
-        # Remove empty rows
-        df.dropna(axis=0, thresh=3, inplace=True) 
-
-        # Contains multiple words => unintended concatenation
-        problem_indices = df[mark_col].iloc[
-            list(df[mark_col].apply(lambda x: " " in x.strip())) 
-        ].index 
-
-        for idx in problem_indices:
-            df = fix_index(df, int(idx))
-            dfs[i] = df 
-    return dfs
-
+    merged = merged.dropna(thresh=2).reset_index(drop=True)
+    # Now, concatenate commetns column of rows with 
+    return merged

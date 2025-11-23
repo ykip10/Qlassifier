@@ -22,8 +22,7 @@ class Tree:
             self, 
             label: str, 
             level: int,
-            page_idx: int = None, 
-            height: float = None
+            page_idx: int = None,
             ):
         """ Initialises Tree object. 
 
@@ -38,10 +37,10 @@ class Tree:
         self.parent = None                               # Distance from root
         self.text = ""          # Text directly underneath header 
         self.marks = 0          # If the node references a question, stores the number of marks.
+        self.has_mcq = self._has_mcq()    # Whether or not the tree has an mcq section. 
 
         # page num and height of label, if applicable
         self.page_idx = page_idx
-        self.height = height
 
     def build(self, nodes: list[Self]):
         """ Builds the tree from a list nodes. Nodes must be structured such that 
@@ -119,4 +118,7 @@ class Tree:
                 out.append(node)
             elif node.level > level: 
                 return out
-        return out 
+        return out
+    
+    def has_mcq(self):
+        return bool(self.label_search(r"(i:)Section [a-zA-Z]"))
