@@ -1,8 +1,11 @@
 from __future__ import annotations 
 from typing import TYPE_CHECKING
 
-from . import material_collector as mc, visualise_parsing as mp
-from paths import DATA_DIR
+import src.Qlassifier.material_collector as mc
+from src.Qlassifier.report_processor import ReportProcessor
+from src.Qlassifier.parsers import WordParser, PDFParser
+from src.Qlassifier.paths import DATA_DIR
+
 
 if TYPE_CHECKING:
     from trees import Tree
@@ -10,25 +13,17 @@ if TYPE_CHECKING:
 
 def process_exams(
     subjects: list[str],
-    years: list[int],
-    reports: bool = True
-) -> tuple[
-    dict[str, list[Tree]], 
-    dict[str, list[Tree]]
-]:
-    # Check if we already have some exams downloaded
-    # Download PDFs then process them
+    years: list[int]
+) -> dict[str, list[Tree]]:
     all_exams = {}
-    all_reports = {} if reports else None
     for subject in subjects:
         print(f"======= {subject} =======")
         subject_dir = DATA_DIR / f"{subject.lower().replace(' ', '_')}"
         exams_dir = subject_dir / "past_exams"
-        reports_dir = subject_dir / "past_reports"
 
         # Downloading
-        print("Downloading exams", " and reports..." if reports else "...")
-        if not mc.extract_exams(subject, years, reports):
+        print("Downloading exams...")
+        if not mc.vcaa_extract_exam_materials(subject, years, reports=False):
             print("Download failed. Exiting.")
             return None
         else:
@@ -37,30 +32,55 @@ def process_exams(
         # Processing
         print("Processing exams...")
         subject_exams = []
-        subject_reports = []
         for file_name in exams_dir.iterdir():
+            # check if it's pdf or word
+            parser = PDFParser(file_name) if file_name.suffix == ".pdf" else WordParser(file_name)
             # process exams
-            exam = mp.process_pdf(exams_dir / file_name)
+            exam = parser.split_headings()
             if exam is None:
                 print("Error processing exam. Exiting.")
                 return None
             subject_exams.append(exam)
-
-            # if we need to process reports, process them as well 
-            if reports:
-                report = mp.extract_headings(reports_dir / file_name)
-                if report is None:
-                    print("Error processing report. Exiting.")
-                    return None
-                subject_reports.append(report)
         
         all_exams[subject] = subject_exams
-        if reports:
-            all_reports[subject] = subject_reports
         print("Success!")
     
-    return all_exams, all_reports
+    return all_exams
 
+
+def process_reports(
+    subjects: list[str],
+    years: list[int]
+) -> dict[str, "list[pd.DataFrame]"]:
+    all_reports = {}
+    for subject in subjects:
+        subject_dir = DATA_DIR / f"{subject.lower().replace(' ', '_')}"
+        reports_dir = subject_dir / "past_exams"
+
+        # Downloading
+        if not mc.vcaa_extract_exam_materials(subject, years, exams=False):
+            print("Report download failed. Exiting.")
+            return None
+        else:
+            print("Success!")
+        
+        # Processing
+        subject_reports = []
+        for file_name in reports_dir.iterdir():
+            # check if it's pdf or word
+            processor = ReportProcessor(file_name)
+            # process exams
+            report = processor.parse_tables()
+            if report is None:
+                print("Error processing report. Exiting.")
+                return None
+            subject_reports.append(report)
+        
+        all_reports[subject] = subject_reports
+    
+    return all_reports
+    
+    
 
 def process_sds(subjects: list[str]):
     pass

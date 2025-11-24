@@ -1,19 +1,18 @@
 """ Includes logic and object definitions for the report parser. This parser has a different goal to 
 the word and PDF parsers, which each would like to parse a document into a Tree object. The report parser,
 which allows report input as either PDF or word, aims to find each question discussed and output a dictionary 
-outlining it's correct answer, any comments, and the mark distribution associated with it (% of students who got X marks)
+outlining it's correct answer, any comments, and the mark distribution associated with it (% of students who got X marks).
 """
-import re
 from pathlib import Path
 from copy import deepcopy
 from collections import defaultdict as dd
 
-from pprint import pprint
 from docx.enum.text import WD_COLOR_INDEX
 import pandas as pd
 
 from src.Qlassifier.parsers import PDFParser, WordParser
 from src.Qlassifier.pdf_utils import get_tables, process_tables
+
 
 def cell_highlighted(cell: object) -> bool:
     """ Helper functions. Checks if a docx cell is highlighted. """
@@ -65,14 +64,8 @@ class ReportProcessor:
 		  - middle columns are percentages for each option
 			(the correct answer is indicated by highlighted text in the cell)
 		
-		Returns a list of dicts:
-			  	[{'question': '1', 
-		    	 'options': [{'index': 0, 'percentage': 45.0, 'is_correct': True}, ...],
-				 'comments': '...'}, 
-		   		 ...]
-				   
-		The dicts are of different structure depending on whether or not the question processed is short-answer.
-		The above is an example of a dict constructed from a multiple choice question (hence the is_correct flag).
+		Returns a list of pandas dataframes, the first index of which is for the MCQ section,
+		and one for the mark distribution of each short answer question. 
 		"""
 		if isinstance(self.parser, WordParser):
 			return self._parse_word_tables()
@@ -143,15 +136,9 @@ class ReportProcessor:
 		return 1
 
 	def _parse_pdf_tables(self):
-		""" See parse_tables. This function assumes the report being parsed is a PDF.
-
-		Strategy: 
-		- Use table extraction methods on Section A (mcq) questions. Loses information 
-		  on the correct answer since we cannot reliably preserve highlighting.
-
-		- On section B, we use the raw text. We look for strings of numbers which 
-		  are at most one-off in their running sum from 100%, and assume these to correspond  
-		  to the mark mass of each question.
+		""" See parse_tables. This function assumes the report being parsed is a PDF. Since 
+		we cannot reliably extract highlighting from PDFs, we do not gain information
+		on which MCQ was correct (not true for word docs)
 		"""
 		# extract all tables inside the pdf
 		results = process_tables(get_tables(self.path))
