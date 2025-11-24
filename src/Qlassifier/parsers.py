@@ -104,7 +104,7 @@ class PDFParser(Parser):
                     if any(matches):
                         # Initialise new node
                         curr = Tree(label=text, level=matches.index(True)+1,
-                                    page_idx=page_idx, height=y0)
+                                    page_idx=page_idx)
                         nodes.append((curr, page_idx, y0))
                 elif curr:
                     # ordinary text

@@ -37,7 +37,7 @@ class Tree:
         self.parent = None                               # Distance from root
         self.text = ""          # Text directly underneath header 
         self.marks = 0          # If the node references a question, stores the number of marks.
-        self.has_mcq = self._has_mcq()    # Whether or not the tree has an mcq section. 
+        self.has_mcq = self.has_mcq()    # Whether or not the tree has an mcq section. 
 
         # page num and height of label, if applicable
         self.page_idx = page_idx

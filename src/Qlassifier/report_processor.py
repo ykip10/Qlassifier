@@ -13,7 +13,7 @@ from docx.enum.text import WD_COLOR_INDEX
 import pandas as pd
 
 from src.Qlassifier.parsers import PDFParser, WordParser
-from src.Qlassifier import pdf_utils
+from src.Qlassifier.pdf_utils import get_tables, process_tables
 
 def cell_highlighted(cell: object) -> bool:
     """ Helper functions. Checks if a docx cell is highlighted. """
@@ -75,7 +75,7 @@ class ReportProcessor:
 		The above is an example of a dict constructed from a multiple choice question (hence the is_correct flag).
 		"""
 		if isinstance(self.parser, WordParser):
-			return self.parse_word_tables()
+			return self._parse_word_tables()
 		elif isinstance(self.parser, PDFParser):
 			return self._parse_pdf_tables()
 		return []	
@@ -154,37 +154,21 @@ class ReportProcessor:
 		  to the mark mass of each question.
 		"""
 		# extract all tables inside the pdf
-		results = pdf_utils.get_tables(self.path)
+		results = process_tables(get_tables(self.path))
 
 		# Still need to get the comments outside of tables
 		root = self.root
-		comments = pd.DataFrame(
-			data={"comments": [root.label_search(qn).text for qn in self.sa_qns]}
-			)
-		results = self._arrange_tables(results)
-		for table in results[1:]: # exclude joined mcq table
-			table = pd.concat([table, comments], axis=1)
-		return results
-	
-	@staticmethod
-	def _arrange_tables(dfs: list[pd.DataFrame]) -> list[pd.DataFrame]:
-		""" Merges list of dfs results so that all tables with comments 
-		are grouped together. If no tables with comments (no mcq questions)
-		then leaves dfs unmodified.
-		"""
-		# want to avoid iterative concatenating,
-		# find end of mcq section
-		sa_start_idx = 0 
-		for df in dfs:
-			if "comments" in [col.lower() for col in df.columns]:
-				sa_start_idx += 1
-			else: 
-				break
-		# edit list to have the first entry as the merged df,
-		# all other entries individual tables
-		if sa_start_idx:
-			merged = pd.concat(dfs[:sa_start_idx], axis=0)
-			dfs = dfs[(sa_start_idx-1):]
-			dfs[sa_start_idx-1] = merged
-		return dfs
+		comment_dfs = [
+			pd.DataFrame(data={"comments": [root.label_search(qn).text]})
+			for qn in self.sa_qns 
+		]
 
+		for idx, table in enumerate(results):
+			if idx == 0: # skip mcq table 
+				continue
+			new_table = pd.concat(
+				[table, comment_dfs[idx-1]],
+				axis=1
+			)
+			results[idx] = new_table
+		return results
