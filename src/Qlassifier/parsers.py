@@ -10,12 +10,14 @@ Word documents which:
 import json
 import re
 from abc import ABC, abstractmethod
+from pathlib import Path
 
-from docx import Document
 import pymupdf
+from docx import Document
 
 from src.Qlassifier.trees import Tree
 from src.Qlassifier import pdf_utils
+
 
 class Parser(ABC):
     @abstractmethod
@@ -26,7 +28,7 @@ class Parser(ABC):
 
 class PDFParser(Parser):
     """ Examination/VCAA report PDF parsing object. Supports cropping as well 
-    as parsing PDF's based on Bold text,  which are assumed to be headers, 
+    as parsing PDF's based on Bold text, which are assumed to be headers, 
     which can then be accessed as a tree object. 
     """
     def __init__(self, path: str, cr_coords: tuple[int] = (0.07, 0.04, 0.93, 0.85)):
@@ -39,7 +41,7 @@ class PDFParser(Parser):
                    w and h are the width and height of the PDF respectively. 
         """
         self.path = path
-        self.cr_coords = cr_coords  # the cropbox we apply will have coordinates 
+        self.cr_coords = cr_coords 
         self._doc = self.load_doc()
         self._copies = []           # keep track of copies to close
         self.qn_hierarchies_regex = [       # question splits
@@ -81,7 +83,7 @@ class PDFParser(Parser):
         Goes through bolded text as candidates for splitting, then checks if the bolded text are 
         valid question splits. Sorts extracted text into a Tree object and returns it. 
 
-        The assumption is that new questions are lablled according to predefined QN_HIERARCHIES. 
+        The assumption is that new questions are labelled according to predefined QN_HIERARCHIES. 
         """
         # Find the last page, then crop the pdf. 
         final_page = self._find_final_page()
@@ -92,8 +94,8 @@ class PDFParser(Parser):
         for page_idx in range(final_page+1): 
             page = doc[page_idx]
             txt_props_lst = self._get_text_and_style(
-                    json.loads(page.get_text("json"))
-                )
+                json.loads(page.get_text("json"))
+            )
 
             # Extract questions and their text from this page 
             for text, is_bold, y0 in txt_props_lst:
@@ -166,8 +168,8 @@ class PDFParser(Parser):
 
             # Search for 'end of examination flag' in footer
             footer_props_lst = self._get_text_and_style(
-                    json.loads(page.get_text("json"))
-                )
+                json.loads(page.get_text("json"))
+            )
             
             for text, _, _, in footer_props_lst:
                 pattern = r"(?i)^end of (?:\w+\s+)*"+\
@@ -176,7 +178,6 @@ class PDFParser(Parser):
                     return page_idx
                 
         return page_idx
-
 
 
 class WordParser(Parser):
@@ -205,6 +206,27 @@ class WordParser(Parser):
             text = page.text.strip()
             if not text:
                 continue
+            
+            # Sometimes, VCAA documents have headings not stylised as such (annoying!)
+            # so we have to check for this and adjust logic accordingly
+            qn_match = re.match(r"Question \d[a-z]i*\.", text)
+            section_match = re.match(r"Section [A-Z]", text)
+            unstylised_heading = "heading" not in style_name.lower() and \
+                         (qn_match or section_match)
+            
+            if unstylised_heading:
+                # This problem has only been found in report docs,
+                # where the following values make sense. Band-aid solution,
+                # more than anything. 
+                if qn_match:
+                    level = 3
+                else: 
+                    level = 2
+                curr = Tree(label=text, level=level,
+                            page_idx=page_idx)
+                headings.append(curr)
+                continue
+                
             if "heading" in style_name.lower():
                 # Found heading
                 parts = style_name.split()
@@ -234,3 +256,12 @@ class WordParser(Parser):
         return doc 
 
 
+class AutoParser:
+    """ Automatically determines whether to use a 
+    WordParser or PDF parser based on input path filetype.
+    Does not allow customisation of cropbox for PDF parsing."""
+    def __init__(self, path: str):
+        if Path(path).suffix not in [".pdf", ".docx"]:
+            raise ValueError("Unsupported file type. Only parses word documents/PDFs.")
+        
+        self.parser = WordParser(path) if Path(path).suffix == ".docx" else PDFParser(path)

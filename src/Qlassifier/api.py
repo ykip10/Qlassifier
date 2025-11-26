@@ -1,86 +1,79 @@
 from __future__ import annotations 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, Union
 
 import src.Qlassifier.material_collector as mc
 from src.Qlassifier.report_processor import ReportProcessor
-from src.Qlassifier.parsers import WordParser, PDFParser
+from src.Qlassifier.parsers import WordParser, PDFParser, AutoParser
 from src.Qlassifier.paths import DATA_DIR
 
 
 if TYPE_CHECKING:
+    import pandas as pd
     from trees import Tree
 
 
-def process_exams(
+def process_material(
     subjects: list[str],
-    years: list[int]
-) -> dict[str, list[Tree]]:
-    all_exams = {}
-    for subject in subjects:
-        print(f"======= {subject} =======")
-        subject_dir = DATA_DIR / f"{subject.lower().replace(' ', '_')}"
-        exams_dir = subject_dir / "past_exams"
-
-        # Downloading
-        print("Downloading exams...")
-        if not mc.vcaa_extract_exam_materials(subject, years, reports=False):
-            print("Download failed. Exiting.")
-            return None
-        else:
-            print("Success!")
-        
-        # Processing
-        print("Processing exams...")
-        subject_exams = []
-        for file_name in exams_dir.iterdir():
-            # check if it's pdf or word
-            parser = PDFParser(file_name) if file_name.suffix == ".pdf" else WordParser(file_name)
-            # process exams
-            exam = parser.split_headings()
-            if exam is None:
-                print("Error processing exam. Exiting.")
-                return None
-            subject_exams.append(exam)
-        
-        all_exams[subject] = subject_exams
-        print("Success!")
+    years: list[int],
+    type: Literal["exam", "report", "study_design"]
+) -> dict[
+    str, 
+    Union[
+        Tree,
+        list[Union[Tree, pd.DataFrame]]
+    ]
+]:  
+    """ Downloads material requested by type, then processes them. Returns 
+    a dictionary mapping each subject to the processed output. """
     
-    return all_exams
+    # Sort out function definitions based on the type of document 
+    def parse(path: str):
+        parser = AutoParser(path).parser
+        return parser.split_headings()
+    
+    if type == "exam":
+        def extractor(subject, years):
+            return mc.vcaa_extract_exam_materials(subject, years, reports=False)
+        folder_name = mc.EXAM_DIR_NAME
 
+    elif type == "report":
+        def extractor(subject, years): 
+            return mc.vcaa_extract_exam_materials(subject, years, exams=False)
+        def parse(path: str):
+            parser = ReportProcessor(path)
+            return parser.parse_tables()
+        folder_name = mc.RP_DIR_NAME
 
-def process_reports(
-    subjects: list[str],
-    years: list[int]
-) -> dict[str, "list[pd.DataFrame]"]:
-    all_reports = {}
+    elif type == "study_design":
+        def extractor(subject, years):
+            return mc.extract_sds(subject)
+        folder_name = mc.SD_DIR_NAME
+
+    else: 
+        raise ValueError("Argument 'type' must be one of  ['exam', 'report, 'study_design']")
+    
+    # Execute main logic 
+    all_docs = {}
     for subject in subjects:
         subject_dir = DATA_DIR / f"{subject.lower().replace(' ', '_')}"
-        reports_dir = subject_dir / "past_exams"
+        dir_name = subject_dir / folder_name
 
         # Downloading
-        if not mc.vcaa_extract_exam_materials(subject, years, exams=False):
+        if not extractor(subject, years):
             print("Report download failed. Exiting.")
             return None
-        else:
-            print("Success!")
         
         # Processing
-        subject_reports = []
-        for file_name in reports_dir.iterdir():
-            # check if it's pdf or word
-            processor = ReportProcessor(file_name)
-            # process exams
-            report = processor.parse_tables()
-            if report is None:
-                print("Error processing report. Exiting.")
+        subject_docs = []
+        for file_name in dir_name.iterdir():
+            if file_name.suffix not in [".docx", ".pdf"]:
+                continue
+            result = parse(file_name)
+            if result is None or not result: 
+                print(f"Error parsing document {file_name}.")
                 return None
-            subject_reports.append(report)
-        
-        all_reports[subject] = subject_reports
-    
-    return all_reports
-    
-    
+            subject_docs.append(result)
 
-def process_sds(subjects: list[str]):
-    pass
+        all_docs[subject] = subject_docs
+    
+    return all_docs

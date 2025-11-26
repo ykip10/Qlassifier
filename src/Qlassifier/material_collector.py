@@ -10,7 +10,6 @@ from pathlib import Path
 import re
 from typing import Sequence
 from urllib.parse import urljoin, urlparse
-import time 
 
 import requests
 from bs4 import BeautifulSoup
@@ -18,6 +17,11 @@ from bs4 import BeautifulSoup
 from src.Qlassifier.paths import DATA_DIR
 
 VCAA_BASE = "https://www.vcaa.vic.edu.au"
+
+# dir names for each type of document
+SD_DIR_NAME = "study_design"
+EXAM_DIR_NAME = "past_exams"
+RP_DIR_NAME = "past_reports"
 
 
 def vcaa_extract_exam_materials(
@@ -51,7 +55,7 @@ def vcaa_extract_exam_materials(
             rf"^(?=.*\bexam(in(a|i)nation)?\b)(?!.*\breport\b)(?!.*\bassessment\b)(?=.*\b({year_pattern})\b)",
             re.IGNORECASE,
         )
-        exam_dir = file_dir / "past_exams"
+        exam_dir = file_dir / EXAM_DIR_NAME
         
         if not save_link(soup, exam_pattern, exam_dir, is_math):
             print(f"Unable to find an exam for {subject} over the years {years}")
@@ -63,7 +67,7 @@ def vcaa_extract_exam_materials(
             rf"^(?=.*\bexam(in(a|i)nation)?\b)(?=.*\breport\b)(?=.*\b({year_pattern})\b)",
             re.IGNORECASE,
         )
-        report_dir = file_dir / "past_reports"
+        report_dir = file_dir / RP_DIR_NAME
 
         if not save_link(soup, report_pattern, report_dir, is_math):
             print(f"Problem finding reports exam for {subject} over the years {years}")
@@ -78,7 +82,7 @@ def extract_sds(subject: str) -> int:
     """
     subject = subject.replace("_", " ")
 
-    file_dir = DATA_DIR / subject.strip().lower().replace(" ", "_") / "study_design"
+    file_dir = DATA_DIR / subject.strip().lower().replace(" ", "_") / SD_DIR_NAME
                             
     file_dir.mkdir(parents=True, exist_ok=True)
 
@@ -160,7 +164,6 @@ def save_link(
 
         if save_path.exists(): # already saved
             continue
-        start_time = time.perf_counter()
         # download and save 
         resp = requests.get(full_url, headers=headers)
         with open(save_path, "wb") as f:

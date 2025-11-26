@@ -52,77 +52,121 @@ def get_tables(
     pages           : pages of pdf to get tables from. If None, gets all tables.
 
     """
-    pdf = PDF(path, 
-              pages=pages,
-              detect_rotation=False,
-              pdf_text_extraction=True)
-
-    extracted_tables = pdf.extract_tables(implicit_rows=False,
-                                          implicit_columns=False,
-                                          borderless_tables=False,
-                                          min_confidence=50)
-
-                                          
+    pdf = PDF(
+        path, 
+        pages=pages,
+        detect_rotation=False,
+        pdf_text_extraction=True
+    )
+    extracted_tables = pdf.extract_tables(
+        implicit_rows=False,
+        implicit_columns=False,
+        borderless_tables=False,
+        min_confidence=50
+    )
     return extracted_tables
 
 
-def process_tables(
-    tables: dict[int, list[ExtractedTable]]
-) -> list[pd.DataFrame]:
-    """ Returns list of dataframes: one merged table for all mcq sub-tables, 
-    and individual tables for each short answer response. 
-    """
+def convert_extracted_tables(
+    tables: dict[int, list[ExtractedTable]],
+) -> tuple[
+    list[pd.DataFrame],
+    list[pd.DataFrame]
+]:
+    """ Converts img2table PDF table extraction output into two lists of dataframes,
+    one merged table for mcq answers, and one for each non-mcq. Outputs are without 
+    an assumed heading. """
     def df_is_mcq(df: pd.DataFrame) -> bool:
         """ Returns True if the dataframe follows the structure of an MCQ report table,
         which typically have more than two rows and can contain empty values in the middle
         columns, where SA tables can not. """
         nrow = df.shape[0]
         middle_cols_df = df[df.columns[1:-1]]
-        return nrow > 2 or middle_cols_df.isna().values.any()
+        
+        # "%" in middle columns only occurs for mcq tables
+        columns = middle_cols_df.loc[0]
+        str_cols = all(isinstance(col, str) for col in columns)
+        has_percentage_cols = any("%" in str(col) for col in columns) \
+                              if str_cols else False
+        
+        return nrow > 2 or middle_cols_df.isna().values.any() or has_percentage_cols
     
     mcq_dfs = []
     sa_dfs = []
     for page_tables in tables.values():
         for table in page_tables:
             df = table.df
+            if len(df.columns) < 4:
+                # not a relevant table
+                continue
             if df_is_mcq(df):
                 mcq_dfs.append(df)
             else:
                 sa_dfs.append(df)
+    return mcq_dfs, sa_dfs
+    
 
+def process_tables(
+    mcq_dfs: list[pd.DataFrame],
+    sa_dfs: list[pd.DataFrame],
+) -> list[pd.DataFrame]:
+    """ Returns list of dataframes: one merged table for all mcq sub-tables, 
+    and individual tables for each short answer response. Process_sas 
+
+    mcq_dfs    : List of dataframes representing tables which can be assumed to come
+                 from multiple choice report answers.
+    sa_dfs     : List of dataframes representing non-mcq tables. 
+    """
     # We want to merge all the mcq dfs together, table may be split across pages.
-    colnames = list(mcq_dfs[0].loc[0]) # First row of first df contains column names 
-    mcq_dfs[0] = mcq_dfs[0].drop(index=0)
+    if mcq_dfs:
+        colnames = list(mcq_dfs[0].loc[0]) 
+        mcq_dfs[0] = mcq_dfs[0].drop(index=0)
 
-    if colnames[-1] is None:
-        colnames[-1] = "comments"
+        # assume empty last column contains comments. 
+        # This is a common vcaa formatting choice. 
+        if colnames[-1] is None:
+            colnames[-1] = "comments"
 
-    for idx, df in enumerate(mcq_dfs):
-        df.columns = colnames
-        mcq_dfs[idx] = df
+        for idx, df in enumerate(mcq_dfs):
+            df.columns = colnames
+            # if any rows match the header, remove them
+            # drop rows that exactly match the header row
+            header = pd.Series(colnames, index=df.columns)
+            df = df.loc[~(df == header).all(axis=1)]
+            mcq_dfs[idx] = df
 
-    merged = pd.concat(mcq_dfs).reset_index(drop=True)
-    # Sometimes, cells spread out in b/w pages. Concatenate comments in this case. 
-    none_idx = merged.index[merged[colnames[1]].isna()]
-    for idx in none_idx: 
-        comment = merged.loc[idx]["comments"]
-        merged.loc[idx-1, "comments"] += " " + comment
+        merged = pd.concat(mcq_dfs).reset_index(drop=True)
+        # Sometimes, cells spread out in b/w pages. Concatenate comments in this case. 
+        none_idx = merged.index[merged[colnames[0]].isna()]
+        for idx in none_idx: 
+            comment = merged.loc[idx]["comments"]
+            merged.loc[idx-1, "comments"] += " " + comment
 
-    merged = merged.dropna(thresh=2).reset_index(drop=True)
+        merged = merged.dropna(subset=colnames[0]).reset_index(drop=True)
+    else:
+        merged = None
+    
     # short answer dfs also need some pre-processing, average column not always 
-    # correct 
+    # correct. Also, some tables which aren't actually SA tables may have been
+    # picked up. 
+    new_sa_dfs = []
     for idx, df in enumerate(sa_dfs): 
         new_cols = df.iloc[0].tolist()
-        lower = [col.lower() for col in new_cols]
+        lower = [col.lower().strip() for col in new_cols]
+        if not any("mark" or "0" in col for col in lower):
+            # not a marks distribution table
+            continue
         if any("average" in col for col in lower):
             # theres an average column, always last
-            lower[-1] = "average" # Extract float from something like "average/n{float}"
-            df.columns = lower 
+            lower[-1] = "average" # Extract float from something like "average\n{float}"
+            df.columns = lower
             curr_s = df.loc[1, "average"].lower().strip()
             df.loc[1, "average"] = curr_s.strip("average").strip()
         df.columns = lower
         df = df[1:].reset_index(drop=True)
-        sa_dfs[idx]= df
-        
-    all_dfs = [merged] + sa_dfs
+
+        new_sa_dfs.append(df)
+    
+    sa_dfs = new_sa_dfs
+    all_dfs = [merged] + sa_dfs if merged is not None else sa_dfs
     return all_dfs

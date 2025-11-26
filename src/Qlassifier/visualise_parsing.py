@@ -10,12 +10,9 @@ Usage:
 	python3 -m src.Qlassifier.visualise_parsing path_to_document --show-report  # Processes the document as a report, shows dictionary output.
 """
 import sys
-from pathlib import Path
-
-import pandas as pd
 
 from src.Qlassifier.report_processor import ReportProcessor
-from src.Qlassifier.parsers import PDFParser, WordParser
+from src.Qlassifier.parsers import AutoParser
 
 def main(argv: list[str] | None = None) -> int:
 	""" Executes program. """
@@ -25,21 +22,13 @@ def main(argv: list[str] | None = None) -> int:
 		return 2
 	
 	path = argv[0]
-	file_extension = Path(path).suffix
 	
 	if len(argv) == 1:
-		if file_extension == ".docx":
-			parser = WordParser(path)
-			root = parser.split_headings()
-			root.filter_tree(r"(Q|q)uestion \d.?")
-		elif file_extension == ".pdf":
-			parser = PDFParser(path, footer_pc=0.15)
-			root = parser.split_headings()
-		else: 
-			print("Unsupported file type. Only parses word documents/PDFs.")
-			return 1
+		parser = AutoParser(path)
+		root = parser.parser.split_headings()
 		root.print_tree()
 		return 0
+	
 	if argv[1] != "--show-report":
 		# Need to execute search 
 		target = argv[1]
