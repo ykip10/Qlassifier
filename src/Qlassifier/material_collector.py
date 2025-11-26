@@ -40,34 +40,43 @@ def vcaa_extract_exam_materials(
     """
     is_math = "mathematic" in subject.lower() # Math subjects have two examinations
     headers = {"User-Agent": "Mozilla/5.0"}   # Need header to extract from VCAA 
+
     file_dir = DATA_DIR / subject.strip().lower().replace(" ", "_")
+    exam_dir = file_dir / EXAM_DIR_NAME
+    report_dir = file_dir / RP_DIR_NAME
+
+    exam_years = required_years(exam_dir, years, is_math)
+    report_years = required_years(report_dir, years, is_math)
+    
+    if not report_years and not exam_years:
+        # Nothing to download
+        return 1
 
     full_url = find_exams_page(subject, headers=headers)
     # Now we find any matching examinations. 
     html = requests.get(full_url, headers=headers).text
     soup = BeautifulSoup(html, "html.parser")
 
-    # We extract hyperlinks which match VCAA hypertext naming convention
-    year_pattern = "|".join(map(str, years))
+
 
     if exams:
+        # We extract hyperlinks which match VCAA hypertext naming convention
+        exam_year_pattern = "|".join(map(str, exam_years))
         exam_pattern = re.compile(
-            rf"^(?=.*\bexam(in(a|i)nation)?\b)(?!.*\breport\b)(?!.*\bassessment\b)(?=.*\b({year_pattern})\b)",
+            rf"^(?=.*\bexam(in(a|i)nation)?\b)(?!.*\breport\b)(?!.*\bassessment\b)(?=.*\b({exam_year_pattern})\b)",
             re.IGNORECASE,
         )
-        exam_dir = file_dir / EXAM_DIR_NAME
         
         if not save_link(soup, exam_pattern, exam_dir, is_math):
             print(f"Unable to find an exam for {subject} over the years {years}")
             return 0
 
-    if reports: 
-        # Need to save reports
+    if reports:
+        report_year_pattern = "|".join(map(str, report_years))
         report_pattern = re.compile(
-            rf"^(?=.*\bexam(in(a|i)nation)?\b)(?=.*\breport\b)(?=.*\b({year_pattern})\b)",
+            rf"^(?=.*\bexam(in(a|i)nation)?\b)(?=.*\breport\b)(?=.*\b({report_year_pattern})\b)",
             re.IGNORECASE,
         )
-        report_dir = file_dir / RP_DIR_NAME
 
         if not save_link(soup, report_pattern, report_dir, is_math):
             print(f"Problem finding reports exam for {subject} over the years {years}")
@@ -80,12 +89,17 @@ def extract_sds(subject: str) -> int:
 
     subject: Subject whose study design is to be extracted.  
     """
-    subject = subject.replace("_", " ")
-
-    file_dir = DATA_DIR / subject.strip().lower().replace(" ", "_") / SD_DIR_NAME
-                            
+    subject_clean = subject.strip().lower().replace(" ", "_")
+    file_dir = DATA_DIR / subject_clean / SD_DIR_NAME
     file_dir.mkdir(parents=True, exist_ok=True)
 
+    # Check if we already have the study design downloaded
+    file_name = subject_clean + "_sd.docx"
+    if (file_dir / file_name).exists():
+        return 1
+
+    # normalise to space for what's to come
+    subject = subject.replace("_", " ")
     url = "https://www.vcaa.vic.edu.au/curriculum/vce-curriculum/vce-study-designs/vce-study-designs"
     headers = {"User-Agent": "Mozilla/5.0"} # Need header to extract from VCAA 
     
@@ -200,6 +214,33 @@ def find_exams_page(subject: str, headers: dict[str, str]) -> str:
         return IE
 
     return full_url
+
+
+def required_years(
+    file_dir: str,
+    years: list[int],
+    is_math: bool = False
+) -> list[int]:
+    """ Returns the subset of years which have not already been downloaded. 
+    Only cares about years. Might partially redownload exams if  """
+    needed_yrs = []
+    for year in years: 
+        file_base = f"{year}"
+        if is_math:
+            file_base_1 = file_base + "_1"
+            file_base_2 = file_base + "_2"
+            should_skip = any(path.stem == file_base_1 or path.stem == file_base_2 \
+                   for path in file_dir.iterdir() if path.is_file())
+        else: 
+            should_skip = any(path.stem == file_base \
+                          for path in file_dir.iterdir() if path.is_file())
+
+        if should_skip:
+            continue
+        
+        needed_yrs.append(year)
+
+    return needed_yrs
 
 
 def main(argv: list[str] | None = None) -> int: 
