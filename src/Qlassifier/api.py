@@ -20,7 +20,7 @@ def process_material(
     str, 
     Union[
         Tree,
-        dict[str, Union[Tree, pd.DataFrame]]
+        dict[str, Union[Tree, list[pd.DataFrame]]]
     ]
 ]:  
     """ Downloads material requested by type, then processes them. Returns 

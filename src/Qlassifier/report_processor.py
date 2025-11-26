@@ -11,7 +11,9 @@ from docx.enum.text import WD_COLOR_INDEX
 import pandas as pd
 
 from src.Qlassifier.parsers import PDFParser, WordParser
-from src.Qlassifier.pdf_utils import get_tables, process_tables, convert_extracted_tables
+from src.Qlassifier.pdf_utils import (get_tables, process_tables,
+                                      convert_extracted_tables, 
+									  standardise_mcq_df)
 
 
 def cell_highlighted(cell: object) -> bool:
@@ -133,32 +135,45 @@ class ReportProcessor:
 			return 1 
 		
 		# If we don't already have a correct answer column, add it
-		cols_lower = [col.lower().strip() for col in cols]
+		cols_lower = [col.lower().strip().replace(" ", "_") for col in cols]
 		has_correct_ans_col = any("correct" in col for col in cols_lower)
 		
 		table_data = dd(list)
+		option_idx = ["%" in col for col in cols_lower].index(True) if mcq else None
+		# keep track of column index where the options begin (mcq only)
+
 		if mcq and not has_correct_ans_col: 
-			cols.append("is_correct")
+			cols_lower.append("correct_answer")
 		elif not mcq:
 			# Short answer, need to extract comments 
 			# from outside the table.
-			cols.append("comments")
+			cols_lower.append("comments")
 			comment = self.root.label_search(next(self.sa_qns)).text
 			table_data["comments"] = comment
 		
 		for row in table.rows[1:]:
 			# Fill table by looking at cells 
-			for idx, cell in enumerate(row.cells):
+			cells = row.cells
+			for idx, cell in enumerate(cells):
 				cell_text = cell.text.strip()
-				table_data[cols[idx]].append(cell_text)
+				table_data[cols_lower[idx]].append(cell_text)
 
 				# mcq tables require some additional logic
-				if mcq:
-					# may need to manually find correct answer
-					if not has_correct_ans_col and cell_highlighted(cell):
-						table_data["is_correct"].append(idx)
-		
-		curr.append(pd.DataFrame(columns=cols, data=table_data))
+				if mcq and not has_correct_ans_col and cell_highlighted(cell):
+					# want to map index to correct choice's letter
+					mapping = {
+						idx: chr((idx - option_idx)+ord("a")).upper() for idx in \
+							 range(option_idx, len(cells[option_idx:-1]))
+					}
+					table_data["correct_answer"].append(mapping[idx])
+	
+
+		df = pd.DataFrame(columns=cols_lower, data=table_data)
+		if mcq and not has_correct_ans_col:
+			# for consistency between mcq dfs: drop n/a column, correct answer 
+			# should appear only after question number
+			df = standardise_mcq_df(df)
+		curr.append(df)
 		return 1
 
 	def _parse_pdf_tables(self):

@@ -10,10 +10,10 @@ def mcq_merged(
     of all multiple choice tables merged over the years indicated by years.
     """
     all_merged = {}
-    subjects = all_reports.keys
+    subjects = all_reports.keys()
     for subject in subjects:
         subject_reports = all_reports[subject]
-        report_types = subject_reports.keys
+        report_types = subject_reports.keys()
 
         dfs_to_merge = [report[0] for report in report_types if any(year in report for year in years)]
         merged = pd.concat(dfs_to_merge, axis=1)

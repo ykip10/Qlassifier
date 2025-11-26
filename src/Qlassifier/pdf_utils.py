@@ -1,7 +1,9 @@
 from pathlib import Path
+import re
 
 import pymupdf
 import pandas as pd
+import numpy as np
 from img2table.document import PDF
 from img2table.tables.objects.extraction import ExtractedTable
 
@@ -126,7 +128,8 @@ def process_tables(
     """
     # We want to merge all the mcq dfs together, table may be split across pages.
     if mcq_dfs:
-        colnames = list(mcq_dfs[0].loc[0]) 
+        colnames = list(mcq_dfs[0].loc[0])
+        new_cols = [col.lower().strip().replace(" ", "_") for col in colnames]
         mcq_dfs[0] = mcq_dfs[0].drop(index=0)
 
         # assume empty last column contains comments. 
@@ -135,20 +138,33 @@ def process_tables(
             colnames[-1] = "comments"
 
         for idx, df in enumerate(mcq_dfs):
-            df.columns = colnames
-            # drop rows that exactly match the header row
+            # drop rows that exactly match the inital header row
             header = pd.Series(colnames, index=df.columns)
             df = df.loc[~(df == header).all(axis=1)]
+            
+            # add in correct answer column
+            correct_ans_col = pd.DataFrame(
+                {"correct_answer": [np.nan]*df.shape[0]}
+            )
+            df = pd.concat([df, correct_ans_col], axis=1, ignore_index=True)
+            df.columns = new_cols + ["correct_answer"]
             mcq_dfs[idx] = df
 
         merged = pd.concat(mcq_dfs).reset_index(drop=True)
         # Sometimes, cells spread out in b/w pages. Concatenate comments in this case. 
-        none_idx = merged.index[merged[colnames[0]].isna()]
-        for idx in none_idx: 
-            comment = merged.loc[idx]["comments"]
-            merged.loc[idx-1, "comments"] += " " + comment
+        none_idx = merged.index[merged[new_cols[0]].isna()]
 
-        merged = merged.dropna(subset=colnames[0]).reset_index(drop=True)
+        for idx in none_idx: 
+            comment = merged.loc[idx, "comments"]
+            if np.isnan(comment) or comment is None:
+                # Empty comments; nothing to concatenate. 
+                merged = merged.drop(index=idx)
+                continue
+            merged.loc[idx-1, "comments"] += " " + str(comment)
+
+        # Drop rows with empty missing values in questions column. 
+        merged = merged.dropna(subset=new_cols[0]).reset_index(drop=True)
+        merged = standardise_mcq_df(merged, -1)
     else:
         merged = None
     
@@ -176,3 +192,30 @@ def process_tables(
     sa_dfs = new_sa_dfs
     all_dfs = [merged] + sa_dfs if merged is not None else sa_dfs
     return all_dfs
+
+
+def standardise_mcq_df(
+    df: pd.DataFrame
+) -> pd.DataFrame:
+    """ For consistency between mcq dfs we drop n/a column, and ensure that the 
+    correct answer column always appears after the question umber
+	should appear only after question number. Assumes the current 
+    correct_answer index column is the last.
+
+    df             : Pandas dataframe
+    option_idx     : Column index where the options data begin (e.g. % A)
+    """
+    cols = df.columns
+
+    option_idx = ["%" in col for col in cols].index(True)
+    reordered_cols = list(cols[:option_idx]) + [cols[-1]] + list(cols[option_idx:-1])
+    df = df.reindex(columns=reordered_cols)
+
+    # Drop na column
+    na_matches = [bool(re.match("%_?(N|n).+", col)) for col in cols]
+    if any(na_matches):
+        match_idx = na_matches.index(True)+1
+        match_col = df.columns[match_idx]
+        df = df.drop(columns=[match_col])
+
+    return df 
