@@ -82,14 +82,20 @@ def convert_extracted_tables(
         columns, where SA tables can not. """
         nrow = df.shape[0]
         middle_cols_df = df[df.columns[1:-1]]
-        
-        # "%" in middle columns only occurs for mcq tables
-        columns = middle_cols_df.loc[0]
+
+        # "%" in columns only occurs for mcq tables
+        columns = df.loc[0, df.columns[:-1]]
         str_cols = all(isinstance(col, str) for col in columns)
         has_percentage_cols = any("%" in str(col) for col in columns) \
                               if str_cols else False
         
-        return nrow > 2 or middle_cols_df.isna().values.any() or has_percentage_cols
+        # All columns of a row except the last contain digits if and only if 
+        # the row belongs to an mcq table, by standard VCAA formatting. 
+        all_digit_cols = all(str(col).strip().isdigit() for col in columns
+                             if col is not None)
+
+        return nrow > 2 or middle_cols_df.isna().values.any() or \
+               has_percentage_cols or all_digit_cols
     
     mcq_dfs = []
     sa_dfs = []
@@ -103,6 +109,7 @@ def convert_extracted_tables(
                 mcq_dfs.append(df)
             else:
                 sa_dfs.append(df)
+
     return mcq_dfs, sa_dfs
     
 
@@ -129,7 +136,6 @@ def process_tables(
 
         for idx, df in enumerate(mcq_dfs):
             df.columns = colnames
-            # if any rows match the header, remove them
             # drop rows that exactly match the header row
             header = pd.Series(colnames, index=df.columns)
             df = df.loc[~(df == header).all(axis=1)]

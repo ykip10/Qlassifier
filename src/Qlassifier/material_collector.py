@@ -47,39 +47,37 @@ def vcaa_extract_exam_materials(
 
     exam_years = required_years(exam_dir, years, is_math)
     report_years = required_years(report_dir, years, is_math)
-    
+
     if not report_years and not exam_years:
         # Nothing to download
         return 1
 
     full_url = find_exams_page(subject, headers=headers)
-    # Now we find any matching examinations. 
+    # Now we find any matching examinations/reports. 
     html = requests.get(full_url, headers=headers).text
     soup = BeautifulSoup(html, "html.parser")
 
-
-
-    if exams:
+    if exams and exam_years:
         # We extract hyperlinks which match VCAA hypertext naming convention
         exam_year_pattern = "|".join(map(str, exam_years))
         exam_pattern = re.compile(
-            rf"^(?=.*\bexam(in(a|i)nation)?\b)(?!.*\breport\b)(?!.*\bassessment\b)(?=.*\b({exam_year_pattern})\b)",
+            rf"^(?=.*\bexam(?:ination)?\b)(?!.*\breport\b)(?!.*\bassessment\b)(?=.*\b({exam_year_pattern})\b)",
             re.IGNORECASE,
         )
         
         if not save_link(soup, exam_pattern, exam_dir, is_math):
-            print(f"Unable to find an exam for {subject} over the years {years}")
+            print(f"Unable to find an exam for {subject} over the years {exam_years}")
             return 0
-
-    if reports:
+    
+    if reports and report_years:
         report_year_pattern = "|".join(map(str, report_years))
         report_pattern = re.compile(
-            rf"^(?=.*\bexam(in(a|i)nation)?\b)(?=.*\breport\b)(?=.*\b({report_year_pattern})\b)",
+            rf"^(?=.*\breport\b)(?=.*\b({report_year_pattern})\b)",
             re.IGNORECASE,
         )
 
         if not save_link(soup, report_pattern, report_dir, is_math):
-            print(f"Problem finding reports exam for {subject} over the years {years}")
+            print(f"Problem finding exam reports for {subject} over the years {report_years}")
             return 0
     return 1
 

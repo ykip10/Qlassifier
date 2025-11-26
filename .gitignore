@@ -7,6 +7,10 @@
 !src/Qlassifier/**
 !src/EDA.ipynb
 
+# Add notebooks
+!notebooks/
+!notebooks/**
+
 # Add repo related files 
 !.gitignore
 !README.md

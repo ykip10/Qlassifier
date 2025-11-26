@@ -41,6 +41,7 @@ class ReportProcessor:
 
 		# tree representation of report
 		self._root = self.parser.split_headings()
+
 		# question labels for short answer questions e.g. ['Question 1ai', 'Question 1aii', ... ]
 		self.sa_qns_lst = self.get_sa_qns()
 		self.sa_qns = iter(self.sa_qns_lst) 
@@ -48,13 +49,27 @@ class ReportProcessor:
 	@property
 	def root(self):
 		return deepcopy(self._root)
+	
 
 	def get_sa_qns(self) -> list[str]:
 		""" Scrapes the names of the short answer questions from the report. """
 		root = self.root
-		qn_regex = r"(Q|q)uestion \d.?"
+		
+		# Need to move to short answer section, if such a well-labelled
+		# header exists in the doc (true for newer vcaa docs).
+		if root.label_search(r"Section") is not None:
+			mcq_root = root.label_search(
+				pattern=r"(?i)multiple[- ]choice"
+			)
+			if mcq_root is not None:
+				# mcq section is labelled, search for NON-mcq section
+				root = root.label_search(
+					pattern=r"^(?!.*(?i:Multiple[- ]Choice)).*Section [A-Z]\b"
+				)
+		
+		qn_regex = r"(Q|q)uestion \d+.?"
 		root.filter_tree(pattern=qn_regex)
-		qn_level = root.find_qn_level(qn_regex=qn_regex)
+		qn_level = root.find_node_level(label_regex=qn_regex)
 		return [node.label for node in root.get_nodes_at_level(qn_level)]
 
 	def parse_tables(self) -> list[pd.DataFrame]:
@@ -84,7 +99,7 @@ class ReportProcessor:
 			top_left_text = table.rows[0].cells[0].text.strip().lower()
 			mcq = len(table.rows) > 2 or top_left_text == "question" \
 				  or top_left_text == "" 
-			if mcq: 
+			if mcq:
 				if not self._parse_word_table(table, curr=mcq_dfs, mcq=True):
 					print("Error parsing mcq questions from report.")
 					return 
@@ -126,7 +141,7 @@ class ReportProcessor:
 			cols.append("is_correct")
 		elif not mcq:
 			# Short answer, need to extract comments 
-			# from outside the table. 
+			# from outside the table.
 			cols.append("comments")
 			comment = self.root.label_search(next(self.sa_qns)).text
 			table_data["comments"] = comment
@@ -134,10 +149,14 @@ class ReportProcessor:
 		for row in table.rows[1:]:
 			# Fill table by looking at cells 
 			for idx, cell in enumerate(row.cells):
-				table_data[cols[idx]].append(cell.text.strip())
-				# may need to manually find correct answer
-				if not has_correct_ans_col and mcq and cell_highlighted(cell):
-					table_data["is_correct"].append(idx)
+				cell_text = cell.text.strip()
+				table_data[cols[idx]].append(cell_text)
+
+				# mcq tables require some additional logic
+				if mcq:
+					# may need to manually find correct answer
+					if not has_correct_ans_col and cell_highlighted(cell):
+						table_data["is_correct"].append(idx)
 		
 		curr.append(pd.DataFrame(columns=cols, data=table_data))
 		return 1
@@ -172,4 +191,3 @@ class ReportProcessor:
 						 "Fault is likely with table processing logic.")
 			results[idx] = new_df
 		return results
-	

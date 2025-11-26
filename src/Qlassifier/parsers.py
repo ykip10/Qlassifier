@@ -209,21 +209,43 @@ class WordParser(Parser):
             
             # Sometimes, VCAA documents have headings not stylised as such (annoying!)
             # so we have to check for this and adjust logic accordingly
-            qn_match = re.match(r"Question \d[a-z]i*\.", text)
-            section_match = re.match(r"Section [A-Z]", text)
+            qn_re = r"Question \d+"
+            sn_re = r"Section [A-Z]"
+            qn_match = re.match(qn_re, text)
+            section_match = re.match(sn_re, text)
+
             unstylised_heading = "heading" not in style_name.lower() and \
                          (qn_match or section_match)
             
             if unstylised_heading:
                 # This problem has only been found in report docs,
                 # where the following values make sense. Band-aid solution,
-                # more than anything. 
-                if qn_match:
-                    level = 3
-                else: 
-                    level = 2
-                curr = Tree(label=text, level=level,
-                            page_idx=page_idx)
+                # more than anything.
+
+                # infer question/section levels from previously seen headings, if possible
+                section_level = next(
+                    (h.level for h in headings if re.match(sn_re, getattr(h, "label", ""))),
+                    None
+                )
+                if section_level is not None:
+                    qn_level = section_level + 1
+                else:
+                    qn_level = next(
+                        (h.level for h in headings if re.match(qn_re, getattr(h, "label", ""))),
+                        None
+                    )
+
+                    # Nothing to infer from previous headings.
+                    # Fallback to standard values for a sectioned document. 
+                    # If not sectioned, this will be incorrect.  
+                    if qn_level is None:
+                        qn_level = 3
+                        section_level = 2
+                    else:
+                        section_level = qn_level - 1
+
+                level = qn_level if qn_match else section_level
+                curr = Tree(label=text, level=level, page_idx=page_idx)
                 headings.append(curr)
                 continue
                 

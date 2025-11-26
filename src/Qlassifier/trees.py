@@ -19,11 +19,11 @@ class Tree:
     marks   : If the node represents a question, this stores the number of marks available in the question. Otherwise, it is 0. 
     """
     def __init__(
-            self, 
-            label: str, 
-            level: int,
-            page_idx: int = None,
-            ):
+        self, 
+        label: str, 
+        level: int,
+        page_idx: int = None,
+    ):
         """ Initialises Tree object. 
 
         label   : Title of the node.
@@ -101,9 +101,11 @@ class Tree:
         # keep this node if it matches, or if any of it's children match. 
         return bool(self.children)
 
-    def find_qn_level(self, qn_regex: str = r".?(Q|q)uestion.?") -> int:
-        """ Finds the level in the tree which are labelled by the word question. """
-        return self.label_search(qn_regex).level
+    def find_node_level(self, label_regex: str = r".?(Q|q)uestion.?") -> int:
+        """ Finds the level in the tree which are labelled by the input label regex. 
+        Useful when an entire level shares a regex naming pattern 
+        (such as Question 1,2...)"""
+        return self.label_search(label_regex).level
 
     def get_nodes_at_level(self, level: int) -> list[Self]:
         """ Returns a list of nodes belonging to the specified level."""

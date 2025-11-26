@@ -20,7 +20,7 @@ def process_material(
     str, 
     Union[
         Tree,
-        list[Union[Tree, pd.DataFrame]]
+        dict[str, Union[Tree, pd.DataFrame]]
     ]
 ]:  
     """ Downloads material requested by type, then processes them. Returns 
@@ -64,15 +64,17 @@ def process_material(
             return None
         
         # Processing
-        subject_docs = []
+        subject_docs = {}
         for file_name in dir_name.iterdir():
-            if file_name.suffix not in [".docx", ".pdf"]:
+            if file_name.suffix not in [".docx", ".pdf"] or not \
+                any(str(year) in str(file_name) for year in years):
                 continue
+
             result = parse(file_name)
             if result is None or not result: 
                 print(f"Error parsing document {file_name}.")
                 return None
-            subject_docs.append(result)
+            subject_docs[file_name.stem] = result
 
         all_docs[subject] = subject_docs
     
