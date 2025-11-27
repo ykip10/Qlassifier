@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Literal, Union
 
 import src.Qlassifier.material_collector as mc
 from src.Qlassifier.report_processor import ReportProcessor
-from src.Qlassifier.parsers import WordParser, PDFParser, AutoParser
+from src.Qlassifier.parsers import AutoParser
 from src.Qlassifier.paths import DATA_DIR
 
 

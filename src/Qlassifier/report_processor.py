@@ -3,12 +3,14 @@ the word and PDF parsers, which each would like to parse a document into a Tree 
 which allows report input as either PDF or word, aims to find each question discussed and output a dictionary 
 outlining it's correct answer, any comments, and the mark distribution associated with it (% of students who got X marks).
 """
+import re
 from pathlib import Path
 from copy import deepcopy
 from collections import defaultdict as dd
 
 from docx.enum.text import WD_COLOR_INDEX
 import pandas as pd
+from pprint import pprint
 
 from src.Qlassifier.parsers import PDFParser, WordParser
 from src.Qlassifier.pdf_utils import (get_tables, process_tables,
@@ -99,8 +101,10 @@ class ReportProcessor:
 		for table in self.parser.doc.tables:
 			# as long as there are more than 2 rows in the table
 			top_left_text = table.rows[0].cells[0].text.strip().lower()
-			mcq = len(table.rows) > 2 or top_left_text == "question" \
-				  or top_left_text == "" 
+			if top_left_text == "":
+				continue
+
+			mcq = bool(re.match(r"q.*n.?$", top_left_text))
 			if mcq:
 				if not self._parse_word_table(table, curr=mcq_dfs, mcq=True):
 					print("Error parsing mcq questions from report.")
@@ -135,14 +139,15 @@ class ReportProcessor:
 			return 1 
 		
 		# If we don't already have a correct answer column, add it
-		cols_lower = [col.lower().strip().replace(" ", "_") for col in cols]
+		cols_lower = [col.lower().strip().replace(" ", "_") if "%" not in col \
+                      else col.lower().strip().replace(" ", "") for col in cols]
 		has_correct_ans_col = any("correct" in col for col in cols_lower)
 		
 		table_data = dd(list)
-		option_idx = ["%" in col for col in cols_lower].index(True) if mcq else None
-		# keep track of column index where the options begin (mcq only)
-
 		if mcq and not has_correct_ans_col: 
+			# First column gives the question numeber. Want to standardise this
+			# to always be "question" as opposed to "Qn", "qn." etc.
+			cols_lower[0] = "question"
 			cols_lower.append("correct_answer")
 		elif not mcq:
 			# Short answer, need to extract comments 
@@ -157,22 +162,23 @@ class ReportProcessor:
 			for idx, cell in enumerate(cells):
 				cell_text = cell.text.strip()
 				table_data[cols_lower[idx]].append(cell_text)
-
 				# mcq tables require some additional logic
 				if mcq and not has_correct_ans_col and cell_highlighted(cell):
 					# want to map index to correct choice's letter
+					option_idx = ["%" in col for col in cols_lower].index(True)
+					# map cell index to correct answer as letters "A", "B" etc.
 					mapping = {
 						idx: chr((idx - option_idx)+ord("a")).upper() for idx in \
-							 range(option_idx, len(cells[option_idx:-1]))
+							 range(option_idx, len(cells[option_idx:-1])+1)
 					}
 					table_data["correct_answer"].append(mapping[idx])
 	
 
 		df = pd.DataFrame(columns=cols_lower, data=table_data)
-		if mcq and not has_correct_ans_col:
+		if mcq:
 			# for consistency between mcq dfs: drop n/a column, correct answer 
-			# should appear only after question number
-			df = standardise_mcq_df(df)
+			# should appear only after question number 
+			df = standardise_mcq_df(df, edit_correct_ans_col= not has_correct_ans_col)
 		curr.append(df)
 		return 1
 

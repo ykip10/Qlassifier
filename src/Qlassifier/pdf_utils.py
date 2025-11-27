@@ -82,8 +82,6 @@ def convert_extracted_tables(
         """ Returns True if the dataframe follows the structure of an MCQ report table,
         which typically have more than two rows and can contain empty values in the middle
         columns, where SA tables can not. """
-        nrow = df.shape[0]
-        middle_cols_df = df[df.columns[1:-1]]
 
         # "%" in columns only occurs for mcq tables
         columns = df.loc[0, df.columns[:-1]]
@@ -91,13 +89,14 @@ def convert_extracted_tables(
         has_percentage_cols = any("%" in str(col) for col in columns) \
                               if str_cols else False
         
+        has_marks_col = any(re.match("(M|m)arks?", str(col)) for col in columns) \
+                        if str_cols else False
+        
         # All columns of a row except the last contain digits if and only if 
         # the row belongs to an mcq table, by standard VCAA formatting. 
         all_digit_cols = all(str(col).strip().isdigit() for col in columns
                              if col is not None)
-
-        return nrow > 2 or middle_cols_df.isna().values.any() or \
-               has_percentage_cols or all_digit_cols
+        return (has_percentage_cols or all_digit_cols) and not has_marks_col
     
     mcq_dfs = []
     sa_dfs = []
@@ -129,13 +128,20 @@ def process_tables(
     # We want to merge all the mcq dfs together, table may be split across pages.
     if mcq_dfs:
         colnames = list(mcq_dfs[0].loc[0])
-        new_cols = [col.lower().strip().replace(" ", "_") for col in colnames]
         mcq_dfs[0] = mcq_dfs[0].drop(index=0)
 
         # assume empty last column contains comments. 
         # This is a common vcaa formatting choice. 
         if colnames[-1] is None:
             colnames[-1] = "comments"
+
+        # For the options columns, we dont want any spaces
+        new_cols = [col.lower().strip().replace(" ", "_") if "%" not in col \
+                    else col.lower().strip().replace(" ", "") for col in colnames]
+        
+        # First column gives the question number. Want to standardise this
+		# to always be "question" as opposed to "Qn", "qn." etc.
+        new_cols[0] = "question"
 
         for idx, df in enumerate(mcq_dfs):
             # drop rows that exactly match the inital header row
@@ -150,21 +156,19 @@ def process_tables(
             df.columns = new_cols + ["correct_answer"]
             mcq_dfs[idx] = df
 
-        merged = pd.concat(mcq_dfs).reset_index(drop=True)
+        merged = pd.concat(mcq_dfs).dropna(how="all").reset_index(drop=True)
         # Sometimes, cells spread out in b/w pages. Concatenate comments in this case. 
         none_idx = merged.index[merged[new_cols[0]].isna()]
-
         for idx in none_idx: 
             comment = merged.loc[idx, "comments"]
-            if np.isnan(comment) or comment is None:
+            if comment is None or pd.isna(comment):
                 # Empty comments; nothing to concatenate. 
-                merged = merged.drop(index=idx)
                 continue
             merged.loc[idx-1, "comments"] += " " + str(comment)
 
         # Drop rows with empty missing values in questions column. 
         merged = merged.dropna(subset=new_cols[0]).reset_index(drop=True)
-        merged = standardise_mcq_df(merged, -1)
+        merged = standardise_mcq_df(merged)
     else:
         merged = None
     
@@ -174,19 +178,21 @@ def process_tables(
     new_sa_dfs = []
     for idx, df in enumerate(sa_dfs): 
         new_cols = df.iloc[0].tolist()
-        lower = [col.lower().strip() for col in new_cols]
-        if not any("mark" or "0" in col for col in lower):
-            # not a marks distribution table
+        if not any(bool(re.match("(M|m)ark", string=col)) for col in new_cols if col is not None):
+            # not a marks distribution table if it doesn't have a "Marks" col
             continue
+
+        lower = [col.lower().strip() for col in new_cols]
         if any("average" in col for col in lower):
             # theres an average column, always last
             lower[-1] = "average" # Extract float from something like "average\n{float}"
             df.columns = lower
             curr_s = df.loc[1, "average"].lower().strip()
             df.loc[1, "average"] = curr_s.strip("average").strip()
+
+        # set new heading, remove first row 
         df.columns = lower
         df = df[1:].reset_index(drop=True)
-
         new_sa_dfs.append(df)
     
     sa_dfs = new_sa_dfs
@@ -195,26 +201,25 @@ def process_tables(
 
 
 def standardise_mcq_df(
-    df: pd.DataFrame
+    df: pd.DataFrame,
+    edit_correct_ans_col: bool = False
 ) -> pd.DataFrame:
     """ For consistency between mcq dfs we drop n/a column, and ensure that the 
-    correct answer column always appears after the question umber
-	should appear only after question number. Assumes the current 
-    correct_answer index column is the last.
-
-    df             : Pandas dataframe
-    option_idx     : Column index where the options data begin (e.g. % A)
+    correct answer column always appears after the question number (this is checked if 
+    edit_correct_ans_col == True).
     """
     cols = df.columns
-
-    option_idx = ["%" in col for col in cols].index(True)
-    reordered_cols = list(cols[:option_idx]) + [cols[-1]] + list(cols[option_idx:-1])
-    df = df.reindex(columns=reordered_cols)
-
+    if edit_correct_ans_col:
+        # reorder columns
+        option_idx = ["%" in col for col in cols].index(True)
+        reordered_cols = list(cols[:option_idx]) + [cols[-1]] + list(cols[option_idx:-1])
+        df = df.reindex(columns=reordered_cols)
+        cols = df.columns
+    
     # Drop na column
-    na_matches = [bool(re.match("%_?(N|n).+", col)) for col in cols]
+    na_matches = [bool(re.match("%( |_)?(N|n).+", col)) for col in cols]
     if any(na_matches):
-        match_idx = na_matches.index(True)+1
+        match_idx = na_matches.index(True)
         match_col = df.columns[match_idx]
         df = df.drop(columns=[match_col])
 
