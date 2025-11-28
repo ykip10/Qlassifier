@@ -202,7 +202,7 @@ def process_tables(
 
 def standardise_mcq_df(
     df: pd.DataFrame,
-    edit_correct_ans_col: bool = False
+    edit_correct_ans_col: bool = True
 ) -> pd.DataFrame:
     """ For consistency between mcq dfs we drop n/a column, and ensure that the 
     correct answer column always appears after the question number (this is checked if 
