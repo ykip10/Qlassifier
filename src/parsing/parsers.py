@@ -15,8 +15,8 @@ from pathlib import Path
 import pymupdf
 from docx import Document
 
-from src.Qlassifier.trees import Tree
-from src.Qlassifier import pdf_utils
+from parsing.trees import Tree
+from parsing import pdf_utils
 
 
 class Parser(ABC):

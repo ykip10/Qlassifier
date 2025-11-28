@@ -1,15 +1,15 @@
 from __future__ import annotations 
 from typing import TYPE_CHECKING, Literal, Union
 
-import src.Qlassifier.material_collector as mc
-from src.Qlassifier.report_processor import ReportProcessor
-from src.Qlassifier.parsers import AutoParser
-from src.Qlassifier.paths import DATA_DIR
+import loading.material_collector as mc
+from parsing.report_processor import ReportProcessor
+from parsing.parsers import AutoParser
+from paths import DATA_DIR
 
 
 if TYPE_CHECKING:
     import pandas as pd
-    from trees import Tree
+    from parsing.trees import Tree
 
 
 def process_material(

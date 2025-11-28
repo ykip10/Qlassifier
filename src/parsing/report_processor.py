@@ -10,10 +10,9 @@ from collections import defaultdict as dd
 
 from docx.enum.text import WD_COLOR_INDEX
 import pandas as pd
-from pprint import pprint
 
-from src.Qlassifier.parsers import PDFParser, WordParser
-from src.Qlassifier.pdf_utils import (get_tables, process_tables,
+from parsing.parsers import PDFParser, WordParser
+from parsing.pdf_utils import (get_tables, process_tables,
                                       convert_extracted_tables, 
 									  standardise_mcq_df)
 

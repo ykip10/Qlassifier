@@ -2,7 +2,7 @@
 Script to collect VCAA past exams and study design for a given VCE subject.
 Saves scraped data to ../data/subject_name.
 
-Usage: python3 -m src.Qlassifier.material_collector subject_name year1,year2,year3...
+Usage: python3 -m src.loading.material_collector subject_name year1,year2,year3...
 """
 
 import sys
@@ -14,7 +14,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from src.Qlassifier.paths import DATA_DIR
+from src.paths import DATA_DIR
 
 VCAA_BASE = "https://www.vcaa.vic.edu.au"
 

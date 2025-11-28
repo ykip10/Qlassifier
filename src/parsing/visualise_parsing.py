@@ -5,14 +5,14 @@ text into hierarchies based on headings and storing the result in trees. For wor
 but for PDF documents the output only makes sense if it is an examination following VCAA formatting "closely enough."
 
 Usage: 
-	python3 -m src.Qlassifier.visualise_parsing path_to_document				# Prints word/PDF doc as a tree 
-	python3 -m src.Qlassifier.visualise_parsing path_to_document [target]   	# Searches for 'target' heading, prints target subtree
-	python3 -m src.Qlassifier.visualise_parsing path_to_document --show-report  # Processes the document as a report, shows dictionary output.
+	python3 -m src.parsing.visualise_parsing path_to_document				# Prints word/PDF doc as a tree 
+	python3 -m src.parsing.visualise_parsing path_to_document [target]   	# Searches for 'target' heading, prints target subtree
+	python3 -m src.parsing.visualise_parsing path_to_document --show-report  # Processes the document as a report, shows dictionary output.
 """
 import sys
 
-from src.Qlassifier.report_processor import ReportProcessor
-from src.Qlassifier.parsers import AutoParser
+from parsing.report_processor import ReportProcessor
+from parsing.parsers import AutoParser
 
 def main(argv: list[str] | None = None) -> int:
 	""" Executes program. """

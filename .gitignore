@@ -3,9 +3,7 @@
 
 # Add main src 
 !src/
-!src/Qlassifier
-!src/Qlassifier/**
-!src/EDA.ipynb
+!src/**
 
 # Add notebooks
 !notebooks/
