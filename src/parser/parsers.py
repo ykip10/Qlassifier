@@ -15,8 +15,8 @@ from pathlib import Path
 import pymupdf
 from docx import Document
 
-from parsing.trees import Tree
-from parsing import pdf_utils
+from src.parser.trees import Tree
+from src.parser import pdf_utils
 
 
 class Parser(ABC):

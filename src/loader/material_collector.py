@@ -42,8 +42,11 @@ def vcaa_extract_exam_materials(
     headers = {"User-Agent": "Mozilla/5.0"}   # Need header to extract from VCAA 
 
     file_dir = DATA_DIR / subject.strip().lower().replace(" ", "_")
+    file_dir.mkdir(exist_ok=True, parents=True)
     exam_dir = file_dir / EXAM_DIR_NAME
+    exam_dir.mkdir(exist_ok=True, parents=True)
     report_dir = file_dir / RP_DIR_NAME
+    report_dir.mkdir(exist_ok=True, parents=True)
 
     exam_years = required_years(exam_dir, years, is_math)
     report_years = required_years(report_dir, years, is_math)

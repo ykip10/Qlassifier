@@ -1,15 +1,16 @@
+""" High level functions for collecting and parsing documents. """
 from __future__ import annotations 
 from typing import TYPE_CHECKING, Literal, Union
 
-import loading.material_collector as mc
-from parsing.report_processor import ReportProcessor
-from parsing.parsers import AutoParser
+import loader.material_collector as mc
+from parser.report_processor import ReportProcessor
+from parser.parsers import AutoParser
 from paths import DATA_DIR
 
 
 if TYPE_CHECKING:
     import pandas as pd
-    from parsing.trees import Tree
+    from parser.trees import Tree
 
 
 def process_material(
@@ -33,7 +34,7 @@ def process_material(
     
     if type == "exam":
         def extractor(subject, years):
-            return mc.vcaa_extract_exam_materials(subject, years, reports=False)
+            return mc.vcaa_extrapct_exam_materials(subject, years, reports=False)
         folder_name = mc.EXAM_DIR_NAME
 
     elif type == "report":

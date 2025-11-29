@@ -11,6 +11,7 @@
 
 # Add repo related files 
 !.gitignore
+!.gitattributes
 !README.md
 !requirements.txt
 
