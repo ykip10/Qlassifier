@@ -3,7 +3,7 @@ most data. Trees support label search, filtering, printing, and other functions
 for processing data in the tree format. Node labels in the object definition 
 are synonomous to the header titles from the documents from which the trees are built. 
 """
-from typing import Self
+from typing import Self, Callable
 import re
 
 
@@ -23,6 +23,8 @@ class Tree:
         label: str, 
         level: int,
         page_idx: int = None,
+        text: str = "",
+        marks: int = 0
     ):
         """ Initialises Tree object. 
 
@@ -33,11 +35,12 @@ class Tree:
         """
         self.label = label
         self.level = level
+        self.visited = False
         self.children = []
-        self.parent = None                               # Distance from root
-        self.text = ""          # Text directly underneath header 
-        self.marks = 0          # If the node references a question, stores the number of marks.
-        self.has_mcq = self.has_mcq()    # Whether or not the tree has an mcq section. 
+        self.parent = None      # Distance from root
+        self.text = text         # Text directly underneath header 
+        self.marks = marks         # If the node references a question, stores the number of marks.
+        self.has_mcq = self._has_mcq()    # Whether or not the tree has an mcq section. 
 
         # page num and height of label, if applicable
         self.page_idx = page_idx
@@ -58,15 +61,15 @@ class Tree:
             stack.append(node)
 
     def label_search(self, pattern: str) -> Self:
-        """ Searches tree for a child node with a regex match between the pattern and the node label using depth-first search (dfs). 
-        Returns None if no match was found. 
+        """ Searches tree for a child node with a regex match between the pattern and the node 
+        label using depth-first search (dfs). Returns None if no match was found. 
         """
-        if re.match(pattern, self.label):
+        if re.search(pattern, self.label):
             return self
 
         for node in self.children:
             found = node.label_search(pattern)
-            if found: 
+            if found is not None: 
                 return found
 
         return None
@@ -104,7 +107,8 @@ class Tree:
     def find_node_level(self, label_regex: str = r".?(Q|q)uestion.?") -> int:
         """ Finds the level in the tree which are labelled by the input label regex. 
         Useful when an entire level shares a regex naming pattern 
-        (such as Question 1,2...)"""
+        (such as Question 1, 2...)
+        """
         return self.label_search(label_regex).level
 
     def get_nodes_at_level(self, level: int) -> list[Self]:
@@ -122,5 +126,69 @@ class Tree:
                 return out
         return out
     
-    def has_mcq(self):
+    def preprocess_text(self, preprocessor: Callable):
+        """ Preprocesses all text in every child node with the preprocessor (function)."""
+        if self.text:
+            self.text = preprocessor(self.text)
+
+        for node in self.children:
+            node.preprocess_text(preprocessor)
+
+    def collapse(self, level: int):
+        """ Recursively collapses tree at specified level, concatenating
+        parent text and labels with child text and labels.
+        
+        Example Tree:
+            Level 2: [Q1]
+            Level 3: [a,b,c]
+
+            After collapse, we have
+
+            Level 2: [Q1a, Q2b, Q2c] with text concatenated. 
+            Level 3: Empty
+        """
+
+        # Approach: iterate over all nodes at the collapsing level 
+        # and replace their parent's children with the collpased nodes
+        nodes = self.get_nodes_at_level(level)
+        for node in nodes:
+            if not node.children:
+                # already collapsed
+                continue
+            parent = node.parent
+
+            collapsed = [] # collapsed nodes
+            self._dfs_collect(node, "", "", collapsed, level=node.level)
+            
+            # replace node with collapsed
+            parent.children.remove(node)
+            parent.children.extend(collapsed)
+
+    def _dfs_collect(
+        self,
+        node: Self,
+        label_prefix: str,
+        text_prefix: str,
+        out: list[Self],
+        level: int
+    ):
+        new_label = label_prefix + node.label
+        new_text = text_prefix + node.text
+
+        if not node.children:
+            new = Tree(
+                label=new_label,
+                level=level,
+                text=new_text,
+                page_idx=node.page_idx,
+                marks=node.marks
+            )
+            new.marks
+            out.append(new)
+            return
+
+        for child in node.children:
+            child._dfs_collect(child, new_label, new_text, out, level)
+            
+    def _has_mcq(self):
         return bool(self.label_search(r"(i:)Section [a-zA-Z]"))

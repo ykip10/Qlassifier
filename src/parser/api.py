@@ -30,7 +30,7 @@ def process_material(
     # Sort out function definitions based on the type of document 
     def parse(path: str):
         parser = AutoParser(path).parser
-        return parser.split_headings()
+        return parser.parse()
     
     if type == "exam":
         def extractor(subject, years):

@@ -25,7 +25,7 @@ def main(argv: list[str] | None = None) -> int:
 	
 	if len(argv) == 1:
 		parser = AutoParser(path)
-		root = parser.parser.split_headings()
+		root = parser.parser.parse()
 		root.print_tree()
 		return 0
 	

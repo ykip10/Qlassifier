@@ -16,12 +16,12 @@ import pymupdf
 from docx import Document
 
 from src.parser.trees import Tree
-from src.parser import pdf_utils
+from src.parser import utils
 
 
 class Parser(ABC):
     @abstractmethod
-    def split_headings(self) -> Tree:
+    def parse(self) -> Tree:
         """ Main method, splitting document into trees based off of headings. """
         pass
 
@@ -77,7 +77,7 @@ class PDFParser(Parser):
             doc.close()
         self._copies.clear()
 
-    def split_headings(self) -> Tree:
+    def parse(self) -> Tree:
         """ Extracts text from a PDF using PyMuPdf and sorts them into Sections and Questions.
 
         Goes through bolded text as candidates for splitting, then checks if the bolded text are 
@@ -125,7 +125,7 @@ class PDFParser(Parser):
         return root
 
     def crop(self, save_path: str = "") -> pymupdf.Document:
-        return pdf_utils.crop(self.doc, self.cr_coords, save_path)
+        return utils.crop(self.doc, self.cr_coords, save_path)
 
     def _span_is_bold(self, span: dict) -> bool:
         """ Checks if a PyMuPdf span is bold or not. """
@@ -191,7 +191,7 @@ class WordParser(Parser):
         self.path = path
         self.doc = self._load_doc()
 
-    def split_headings(self) -> Tree: 
+    def parse(self) -> Tree: 
         """ Return a list of (level, text) for headings found in the document 
         found at path. It operates on the assumption that the document's 
         headings are stylised as headings (as opposed to something like 
@@ -278,12 +278,16 @@ class WordParser(Parser):
         return doc 
 
 
-class AutoParser:
+class AutoParser(Parser):
     """ Automatically determines whether to use a 
     WordParser or PDF parser based on input path filetype.
     Does not allow customisation of cropbox for PDF parsing."""
     def __init__(self, path: str):
         if Path(path).suffix not in [".pdf", ".docx"]:
             raise ValueError("Unsupported file type. Only parses word documents/PDFs.")
-        
+        self.path = path
         self.parser = WordParser(path) if Path(path).suffix == ".docx" else PDFParser(path)
+    
+    def parse(self):
+        """ Parses the document into a Tree object. """
+        return self.parser.parse()

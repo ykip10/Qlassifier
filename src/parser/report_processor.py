@@ -12,7 +12,7 @@ from docx.enum.text import WD_COLOR_INDEX
 import pandas as pd
 
 from src.parser.parsers import PDFParser, WordParser
-from src.parser.pdf_utils import (get_tables, process_tables,
+from src.parser.utils import (get_tables, process_tables,
                                       convert_extracted_tables, 
 									  standardise_mcq_df)
 
@@ -43,7 +43,7 @@ class ReportProcessor:
 		self._results = []
 
 		# tree representation of report
-		self._root = self.parser.split_headings()
+		self._root = self.parser.parse()
 
 		# question labels for short answer questions e.g. ['Question 1ai', 'Question 1aii', ... ]
 		self.sa_qns_lst = self.get_sa_qns()
