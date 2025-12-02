@@ -42,7 +42,7 @@ class Tree:
         self.marks = marks         # If the node references a question, stores the number of marks.
         self.has_mcq = self._has_mcq()    # Whether or not the tree has an mcq section. 
 
-        # page num and height of label, if applicable
+        # page num,if applicable
         self.page_idx = page_idx
 
     def build(self, nodes: list[Self]):
@@ -126,7 +126,7 @@ class Tree:
                 return out
         return out
     
-    def preprocess_text(self, preprocessor: Callable):
+    def preprocess_text(self, preprocessor: Callable[[str], str]):
         """ Preprocesses all text in every child node with the preprocessor (function)."""
         if self.text:
             self.text = preprocessor(self.text)
@@ -134,7 +134,7 @@ class Tree:
         for node in self.children:
             node.preprocess_text(preprocessor)
 
-    def collapse(self, level: int):
+    def collapse(self, level: int, sep: str = "", concat_label: bool = False):
         """ Recursively collapses tree at specified level, concatenating
         parent text and labels with child text and labels.
         
@@ -146,6 +146,12 @@ class Tree:
 
             Level 2: [Q1a, Q2b, Q2c] with text concatenated. 
             Level 3: Empty
+        
+        Args:
+        level       : level to collapse at 
+        sep         : Character to use as a separator between labels when concatenating
+        concat_label: Boolean flag indicating whether or not we should concatenate labels
+                      (as opposed to just using the child's label)
         """
 
         # Approach: iterate over all nodes at the collapsing level 
@@ -158,7 +164,8 @@ class Tree:
             parent = node.parent
 
             collapsed = [] # collapsed nodes
-            self._dfs_collect(node, "", "", collapsed, level=node.level)
+            self._dfs_collect(node, "", "", collapsed, level=node.level,
+                              sep=sep, concat_label=concat_label)
             
             # replace node with collapsed
             parent.children.remove(node)
@@ -170,10 +177,16 @@ class Tree:
         label_prefix: str,
         text_prefix: str,
         out: list[Self],
-        level: int
+        level: int,
+        sep: str,
+        concat_label: bool
     ):
-        new_label = label_prefix + node.label
-        new_text = text_prefix + node.text
+        """ Collapses all nodes from input node, edits the out list to contain
+        the flattened collapsed, nodes. 
+        """
+        new_label = label_prefix + sep + node.label \
+                    if label_prefix and not concat_label else node.label 
+        new_text = text_prefix + sep + node.text
 
         if not node.children:
             new = Tree(
@@ -188,7 +201,7 @@ class Tree:
             return
 
         for child in node.children:
-            child._dfs_collect(child, new_label, new_text, out, level)
+            child._dfs_collect(child, new_label, new_text, out, level, sep, concat_label)
             
     def _has_mcq(self):
         return bool(self.label_search(r"(i:)Section [a-zA-Z]"))

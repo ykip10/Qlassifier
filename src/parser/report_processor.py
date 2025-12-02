@@ -33,9 +33,9 @@ def cell_highlighted(cell: object) -> bool:
 class ReportProcessor:
 	""" Processor containing methods for processing VCAA documents as either PDFs or Word docs."""
 	def __init__(self, path: str):
-		""" Creates an object for report processing. 	
-		path: Report path
-		ext : File extension (.pdf or .docx)
+		""" Creates an object for report processing.
+
+		path: Reports' path. Needs a .pdf or .docx file extension.
 		"""
 		self.path = str(path)
 		self.parser = WordParser(path) if Path(path).suffix == ".docx" \
@@ -53,7 +53,6 @@ class ReportProcessor:
 	def root(self):
 		return deepcopy(self._root)
 	
-
 	def get_sa_qns(self) -> list[str]:
 		""" Scrapes the names of the short answer questions from the report. """
 		root = self.root

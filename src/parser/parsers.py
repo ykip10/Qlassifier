@@ -48,7 +48,7 @@ class PDFParser(Parser):
                 r"^S(?i:ection) [A-Z]", 	# level 1
                 r"Question \d+",			# level 2
                 r"[a-h]\.",					# level 3
-                r"i+\.",					# level 4
+                r"i+v*\.",					# level 4
         ]
 
     @property
@@ -99,15 +99,30 @@ class PDFParser(Parser):
 
             # Extract questions and their text from this page 
             for text, is_bold, y0 in txt_props_lst:
+                # bold fallback: not all bold-looking text in pdfs will be detected as bold
+                # here. Only happens on max-indented sub-questions; aiv), ai) etc.
+                text = text.strip()
+                fallback_re = r"^([a-i]|v)+\.$"
+                fallback = bool(re.search(fallback_re, text))
+             
                 if is_bold:
                     # possible question split candidate
                     matches = [bool(re.match(pattern, text)) 
-                               for pattern in self.qn_hierarchies_regex]
+                              for pattern in self.qn_hierarchies_regex]
                     if any(matches):
                         # Initialise new node
                         curr = Tree(label=text, level=matches.index(True)+1,
                                     page_idx=page_idx)
                         nodes.append((curr, page_idx, y0))
+                    elif curr is not None and ("section" or "question" not in text.lower()):
+                        # normal bolded text
+                        curr.text += " " + text
+                elif fallback:
+                    label = re.search(fallback_re, text).group().strip()
+                    remaining_txt = re.sub(fallback_re, "", text)
+                    curr = Tree(label=label, level=len(self.qn_hierarchies_regex)-1,
+                                page_idx=page_idx, text = remaining_txt)
+                    nodes.append((curr, page_idx, y0))
                 elif curr:
                     # ordinary text
                     mark_match = re.search(r"(\d+)\s*marks?", text)
