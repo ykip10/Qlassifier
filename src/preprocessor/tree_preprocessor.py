@@ -1,3 +1,4 @@
+""" Class for preprocessing the text present in trees. """
 import re
 from typing import Literal
 

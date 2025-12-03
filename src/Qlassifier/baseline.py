@@ -21,35 +21,9 @@ def run_tf_idf(
     dictionary mapping each question in the exam to a study design dot point,
     and the similarity scores for each dot point found in the parsed study design.
     """
-    exam_path = Path(exam_path)
-    if not exam_path.exists():
-        raise FileNotFoundError(f"No file found at {exam_path}.")
-    
-    exam = exam_path.stem
-    subject_path = exam_path.parents[1]
-    subject = subject_path.stem
+    subject = Path(exam_path).parents[1].stem
+    ex_root, reports_df, sd_root = load_data(exam_path)
 
-    # Find report
-    report_dir = subject_path / "past_reports"
-    # Check if report is a .pdf or .docx
-    if (report_dir / f"{exam}.pdf").exists():
-        ext = ".pdf"
-    elif (report_dir / f"{exam}.docx").exists():
-        ext =".docx"
-    else: 
-        raise FileNotFoundError(f"Cannot find associated report for exam at {exam_path}.")
-    report_path = report_dir / f"{exam}{ext}"
-
-    # Find study design
-    sd_path = subject_path / "study_design" / f"{subject}_sd.docx"
-    if not sd_path.exists():
-        raise FileNotFoundError(f"Cannot find study design for {subject}")
-
-    # load in data 
-    ex_root = AutoParser(exam_path).parse()
-    reports_df = ReportProcessor(report_path).parse_tables()
-    sd_root = AutoParser(sd_path).parse()
-    
     qns_labels, qns_desc = get_paragraphs(ex_root, subject=subject, doc_type="past_exam")
     topic_labels, topic_desc = get_paragraphs(sd_root, subject=subject, doc_type="study_design")
 
@@ -102,6 +76,43 @@ def run_tf_idf(
     return out_df
 
 
+def load_data(exam_path: str) -> tuple[Tree, pd.DataFrame, Tree]:
+    """ Loads all relevant data to the input exam_path. This includes:
+      - The parsed exam document as a Tree
+      - The parsed report as a pandas df
+      - The parsed study design as a tree
+    """
+    exam_path = Path(exam_path)
+    if not exam_path.exists():
+        raise FileNotFoundError(f"No file found at {exam_path}.")
+    
+    exam = exam_path.stem
+    subject_path = exam_path.parents[1]
+    subject = subject_path.stem
+
+    # Find report
+    report_dir = subject_path / "past_reports"
+    # Check if report is a .pdf or .docx
+    if (report_dir / f"{exam}.pdf").exists():
+        ext = ".pdf"
+    elif (report_dir / f"{exam}.docx").exists():
+        ext =".docx"
+    else: 
+        raise FileNotFoundError(f"Cannot find associated report for exam at {exam_path}.")
+    report_path = report_dir / f"{exam}{ext}"
+
+    # Find study design
+    sd_path = subject_path / "study_design" / f"{subject}_sd.docx"
+    if not sd_path.exists():
+        raise FileNotFoundError(f"Cannot find study design for {subject}")
+
+    # load in data 
+    ex_root = AutoParser(exam_path).parse()
+    reports_df = ReportProcessor(report_path).parse_tables()
+    sd_root = AutoParser(sd_path).parse()
+    return ex_root, reports_df, sd_root
+
+
 def get_paragraphs(
     root: Tree,
     subject: str,
@@ -125,7 +136,7 @@ def get_paragraphs(
     tg_level = root.find_node_level(level_re)
     if doc_type == "study_design" and not is_math:
         tg_level += 1
-
+        
     # preprocess then collapse
     root = pre.preprocess(root=root, subject=subject)
     root.collapse(level=tg_level, concat_label=doc_type!="past_exam")

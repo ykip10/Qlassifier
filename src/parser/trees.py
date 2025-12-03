@@ -3,9 +3,9 @@ most data. Trees support label search, filtering, printing, and other functions
 for processing data in the tree format. Node labels in the object definition 
 are synonomous to the header titles from the documents from which the trees are built. 
 """
-from typing import Self, Callable
+from typing import Self, Callable, Optional
 import re
-
+import pandas as pd
 
 class Tree:
     """ Trees contain data on all processed documents in this project. 
@@ -60,7 +60,7 @@ class Tree:
             stack[-1].children.append(node)
             stack.append(node)
 
-    def label_search(self, pattern: str) -> Self:
+    def label_search(self, pattern: str) -> Optional[Self]:
         """ Searches tree for a child node with a regex match between the pattern and the node 
         label using depth-first search (dfs). Returns None if no match was found. 
         """
@@ -104,7 +104,7 @@ class Tree:
         # keep this node if it matches, or if any of it's children match. 
         return bool(self.children)
 
-    def find_node_level(self, label_regex: str = r".?(Q|q)uestion.?") -> int:
+    def find_node_level(self, label_regex: str = r"Question") -> int:
         """ Finds the level in the tree which are labelled by the input label regex. 
         Useful when an entire level shares a regex naming pattern 
         (such as Question 1, 2...)
@@ -202,6 +202,26 @@ class Tree:
 
         for child in node.children:
             child._dfs_collect(child, new_label, new_text, out, level, sep, concat_label)
-            
+    
+    def to_df(self, include_root: bool = True):
+        """ Converts the tree to a pandas DataFrame with columns:
+        - 'label': node label
+        - 'text' : associated text for the node
+
+        Traverses the tree in depth-first order and includes the root node.
+        """
+        rows = []
+
+        def _dfs(node):
+            rows.append({"label": node.label, "text": node.text})
+            for child in node.children:
+                _dfs(child)
+
+        _dfs(self)
+        df = pd.DataFrame(rows, columns=["label", "text"])
+        if not include_root:
+            df = df.loc[df["label"] != self.label, :]
+        return df
+
     def _has_mcq(self):
         return bool(self.label_search(r"(i:)Section [a-zA-Z]"))

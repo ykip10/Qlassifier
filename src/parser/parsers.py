@@ -128,6 +128,7 @@ class PDFParser(Parser):
                     mark_match = re.search(r"(\d+)\s*marks?", text)
                     if mark_match and not curr.marks:
                         curr.marks = int(mark_match.group(1))
+                        continue
                     curr.text += " " + text
 
 
