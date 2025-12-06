@@ -15,8 +15,9 @@ from src.parser.trees import Tree
 
 def run_tf_idf(
     exam_path: str,
+    include_report: bool = True,
     **vectorizerargs
-) -> dict[str, str]:
+) -> tuple[dict[str, str], np.array]:
     """ Runs TF-IDF on an exam and the subject's study design. Returns 
     dictionary mapping each question in the exam to a study design dot point,
     and the similarity scores for each dot point found in the parsed study design.
@@ -37,12 +38,12 @@ def run_tf_idf(
     if len(ans_desc) != len(ans_labels):
         raise Exception("The number of questions extracted from report and exam differ. " \
                         "Likely an error in parsing error")
-    
 
     vectorizer = TfidfVectorizer(**vectorizerargs)
     # Merge question text and report text to treat them as the same "document" for TF-IDF purposes. 
     qns_ans_merged = [(qn_desc + " " + ans_desc).strip() for \
-                     qn_desc, ans_desc in zip(qns_desc, ans_desc)]
+                     qn_desc, ans_desc in zip(qns_desc, ans_desc)] if include_report else \
+                     [qn_desc.strip() for qn_desc in qns_desc]
     # need to apply TF-IDF on the entire corpus, so we merge with the topics
     merged = topic_desc + qns_ans_merged
 
@@ -56,24 +57,22 @@ def run_tf_idf(
     assigned = np.argmax(similarity, axis=1)
     out_df = pd.DataFrame(
         data={
-            "Question": qns_labels,
-            "Predicted Topic": assigned, 
-            **{f"{topic} (Similarity)": similarity[:, i] for i, topic in enumerate(topic_labels)}
+            "label": qns_labels,
+            "text": qns_desc,
+            "comments": ans_desc,
+            "pred_topic_idx": assigned, 
+            "pred_topic": [topic_labels[idx] for idx in assigned],
+            #**{f"{topic} (Similarity)": similarity[:, i] for i, topic in enumerate(topic_labels)}
         }
     )
 
     # add confidence column as similarity / sum(similarity)
-    sim_cols = out_df.iloc[:, 2:]
-
-    confidence_col = out_df.apply(
-        lambda row: sim_cols.iloc[row.name, row["Predicted Topic"]] / sum(sim_cols.iloc[row.name, :]),
-        axis=1
-    )
+    confidence_col = [sims[pred_idx] / sum(sims) for pred_idx, sims in zip(assigned, similarity)]
     # Map to [0, 1]
     confidence_col = confidence_col / max(confidence_col)
     out_df["Confidence"] = confidence_col
     
-    return out_df
+    return out_df, similarity
 
 
 def load_data(exam_path: str) -> tuple[Tree, pd.DataFrame, Tree]:

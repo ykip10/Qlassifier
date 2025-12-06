@@ -23,28 +23,30 @@ class Tree:
         label: str, 
         level: int,
         page_idx: int = None,
+        subject_name: str = "",
         text: str = "",
-        marks: int = 0
+        marks: int = 0,
     ):
         """ Initialises Tree object. 
 
-        label   : Title of the node.
-        level   : Distance from the tree root. 
-        page_idx: Which page the label was found (
-        height  : Label height on page
+        label       : Title of the node.
+        level       : Distance from the tree root. 
+        page_idx    : Which page the label was found
+        subject_name: If applicable, the name of the subject w.r.t which the tree is relevant
+        text        : Description of each node 
+        marks       : If the node references a question, stores the number of marks.
         """
         self.label = label
         self.level = level
-        self.visited = False
-        self.children = []
-        self.parent = None      # Distance from root
-        self.text = text         # Text directly underneath header 
-        self.marks = marks         # If the node references a question, stores the number of marks.
-        self.has_mcq = self._has_mcq()    # Whether or not the tree has an mcq section. 
-
-        # page num,if applicable
         self.page_idx = page_idx
-
+        self.subject_name = subject_name
+        self.text = text       
+        self.marks = marks     
+        
+        self.parent = None
+        self.children = []
+        self.has_mcq = self._has_mcq()
+        
     def build(self, nodes: list[Self]):
         """ Builds the tree from a list nodes. Nodes must be structured such that 
         each child of a node appears directly after it and before the next sibling node.
@@ -203,15 +205,27 @@ class Tree:
         for child in node.children:
             child._dfs_collect(child, new_label, new_text, out, level, sep, concat_label)
     
-    def to_df(self, include_root: bool = True):
+    def to_df(self, include_root: bool = True, level=0):
         """ Converts the tree to a pandas DataFrame with columns:
-        - 'label': node label
-        - 'text' : associated text for the node
+        label: node label
+        text : associated text for the node
 
-        Traverses the tree in depth-first order and includes the root node.
+        If level==0, 
+        Traverses the tree in depth-first order and optionally includes the root node.
+
+        If level > 0, only converts the nodes at level into a df.
         """
+        if level: 
+            nodes = self.get_nodes_at_level(level)
+            df = pd.DataFrame(
+                data={
+                    "label": [node.label.strip() for node in nodes],
+                    "text": [node.text.strip(" :\n\t,") for node in nodes]
+                }
+            )
+            return df
+        
         rows = []
-
         def _dfs(node):
             rows.append({"label": node.label, "text": node.text})
             for child in node.children:
