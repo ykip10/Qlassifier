@@ -1,0 +1,168 @@
+,label,text,comments,total_marks,pred_topic,pred_topic_idx,report_pred,true_topic_idx,true_topic
+0,Question 1,Which one of the following correctly represents the reaction of glucose in human cells? Type of reaction Endothermic or exothermic A. respiration endothermic B. respiration exothermic C. hydrolysis endothermic D. hydrolysis exothermic,"In human cells, glucose reacts with oxygen in respiration – an energy-releasing, i.e. exothermic, reaction.
+C6H12O6(aq) + 6O2(g) à 6CO2(g) + 6H2O(l), ΔH = -2880 kJ",1,Carbon-based fuels,0,0,0,Carbon-based fuels
+1,Question 2,Which one of the following statements is correct? A. Fuel cells and galvanic cells produce heat. B. Fuel cells have inert electrodes whereas galvanic cells do not. C. Fuel cells have porous electrodes whereas galvanic cells do not. D. Fuel cells and galvanic cells operate when electrons flow through the electrolyte.,"Fuel cells and galvanic cells both produce heat energy as well as electrical energy. 
+Galvanic cell electrodes may be active, as in the Zn2+(aq)/Zn(s) half-cell, or inert, as in the Fe3+(aq)/Fe2+(aq) half-cell where a Pt or C(graphite) electrode could be used.
+Both fuel cells and galvanic cells can have porous electrodes because this increases the surface area for reaction.
+Electrons do not flow through the electrolyte in electrochemical cells; they travel through the external circuit between the anode and the cathode.",1,Primary galvanic cells and fuel cells as sources of energy,2,2,2,Primary galvanic cells and fuel cells as sources of energy
+2,Question 3,"Molecules X, and all have the same number of carbon atoms. What is the order of melting points, from highest to lowest, for these three molecules? A. Y, X, B. Y, Z, C. Z, X,","The larger the number of C=C double bonds in the molecule the more loosely the chains pack together, the weaker the intermolecular attraction, and the lower the melting point. Therefore, Z has the lowest melting point and Y, with no C=C double bonds, and the strongest intermolecular attraction, has the highest melting point.",1,"Structure, nomenclature and properties of organic compounds",6,6,6,"Structure, nomenclature and properties of organic compounds"
+3,Question 4,cell can be considered secondary cell if A. it has continuous supply of reactants. B. it can operate at different temperatures. C. the polarity of the electrodes remains unchanged. D. it can operate as both galvanic and electrolytic cell.,"The polarity of the physical electrodes does not change. 
+The positive electrode remains positive in both galvanic and electrolytic cells. However, the process at that electrode changes – from reduction in a galvanic cell to oxidation in an electrolytic cell – due to the change in the direction of electron flow.
+A cell is classified as a secondary cell if it operates as both a galvanic and electrolytic cell. Secondary cells have all reactants contained within the cells.",1,Primary galvanic cells and fuel cells as sources of energy,2,2,5,Production of chemicals using electrolysis
+4,Question 5,"Consider the following statements about coenzymes. I. Coenzymes assist enzymes to catalyse reaction. II. Coenzymes bind loosely to the active site of an enzyme. III.	 Coenzymes act as carriers in the transfer of electrons and atoms. Which of the statements above are correct? A. and II only B. and III only C. II and III only D. I, II and III","All three statements are properties of coenzymes.
+Coenzymes assist enzymes to catalyse a reaction, by binding loosely to the active site of the enzymes and supporting the transfer of electrons and atoms during the reaction.",1,Rates of chemical reactions,3,3,10,Medicinal chemistry
+5,Question 6,"Consider the following statements. I. HPLC is qualitative process. II. HPLC is quantitative process. III.	 Triplets give information about molecule structure. Which of the above statements apply to high-performance liquid chromatography (HPLC)? A. only B. II only C. and II only D. I, II and III","HPLC is qualitative in that comparing retention times with those of standard samples enables the possible identification of the components of a mixture.
+HPLC is quantitative in that relative areas under peaks are used to calculate the percentage of each component in the mixture.
+Triplets are associated with 1H NMR spectroscopy.",1,Instrumental analysis of organic compounds,9,9,9,Instrumental analysis of organic compounds
+6,Question 7,Consider the following statements about fossil fuels and biofuels. I. Production of biofuels does not damage the environment. II. Combustion of both biofuels and fossil fuels generates greenhouse gases. III.	 Biofuels and fossil fuels are both renewable as they are produced from plants. Which of the statements above are correct? A. only B. II only C. and II only D. and III only,"Biofuel production potentially does damage the environment by degrading land used to grow food and through emissions from fuels used in production and transport.
+Both biofuel and fossil fuels do generate greenhouse gases – CO2(g) and/or H2O(g).
+Biofuels are renewable but fossil fuels, while traceable back to plants, take millions of years to form and are not considered renewable.",1,Carbon-based fuels,0,0,0,Carbon-based fuels
+7,Question 8,"At 327 °C, the equilibrium constant for the reaction (g) 3H (g) 2NH (g) is 4.10 −2 What is the equilibrium constant at 327 °C for the reaction 2N (g) 6H (g) 4NH (g)? A. 8.20 −2 B. 8.20 −4 C. 16.8 −2 D. 16.8 −4","N2(g) + 3H2(g) ⇋ 2NH3(g)                  K  = 4.10 M−2
+The original equation coefficients have been doubled, so the Kvalue is raised to the power of 2 (squared).
+2N2(g) + 6H2(g) ⇋ 4NH3(g)                K 	= (4.10 M−2)2
+				= 16.8 M−4",1,Extent of chemical reactions,4,4,4,Extent of chemical reactions
+8,Question 9,"Consider the following statements about coal seam gas and petroleum gas. I. Coal seam gas and petroleum gas are both mixtures. II. Coal seam gas and petroleum gas both combust to produce carbon dioxide. III.	 Coal seam gas and petroleum gas are both fossil fuels. Which of the above statements are correct? A. and II only B. and III only C. II and III only D. I, II and III","The main component of coal seam gas is a mixture of methane – 88 to 98% – with small amounts of other hydrocarbons.
+Petroleum gas, associated with crude oil, is also a mixture of lighter hydrocarbons. 
+Both coal seam gas and petroleum gas are fossil fuels and produce CO2 on combustion.",1,Carbon-based fuels,0,0,0,Carbon-based fuels
+9,Question 10,"At constant temperature, which one of the following always corresponds to an increase of the yield of chemical reaction? A. An increase in the value of the equilibrium expression. B. An increase in the concentration of the reactants. C. decrease in the activation energy. D. An increase in the pressure.","A higher value for the equilibrium expression suggests a higher proportion of products / increased product concentration compared to reactants, and hence a higher yield.
+An increase in reactant concentration will increase the yield in any equilibrium where the concentration fraction (reaction quotient) increases, as a result of a change that favours the forward reaction. The system moves to compensate for the change by favouring the forward reaction.
+However, if the concentration increase occurs by decreasing the volume of an equilibrium mixture in which there are the same number of mol of particles on both sides, as in the equilibrium
+          H2(g) + Cl2(g)  ⇋  2HCl(g),
+the value of the concentration fraction (reaction quotient) [HCl]2/[H2][Cl2] does not change and there is no change in the yield.
+A decrease in activation energy increases the reaction rate and allows the system to get to equilibrium faster but has no effect on the equilibrium yield.
+A pressure increase will cause the reaction to favour the side of the equilibrium with the lower number of mol of particles. However, it has no impact on the yield of an equilibrium system with the same number of particles on both sides, as in
+	H2(g) + Cl2(g)  ⇋  2HCl(g)",1,Extent of chemical reactions,4,4,4,Extent of chemical reactions
+10,Question 11,student conducted an experiment to determine the rate of chemical reaction. The graph of the student’s results is shown below. time (s) concentration of product (M) Which one of the following correctly shows the units of the initial rate of reaction? A. mol −1 −1 B. mol −1 C. mol −1 D. mol,"Reaction rate is the change in the quantity of a reactant or product per unit time,
+i.e.  M / s  = mol L−1 / s = mol L−1 s−1",1,Extent of chemical reactions,4,4,3,Rates of chemical reactions
+11,Question 12,"Consider the following features of chemical reaction. I. activation energy II. ∆H of the reaction III.	 enthalpy of the reactants Compared with the uncatalysed reaction pathway, the presence of catalyst changes A. only. B. II only. C. II and III only. D. I, II and III.","The presence of a catalyst
+lowers the activation energy
+has no effect on the enthalpy change, ΔH
+has no effect on the enthalpy of reactants or products.",1,Rates of chemical reactions,3,3,3,Rates of chemical reactions
+12,Question 13,Which molecule can exist as both cis and trans isomer? A. CH CBrCl B. CH CHBrCl C. CH CHCHCl D. (CH CCCl,"The terms ‘cis’ and ‘trans’ are commonly associated with unsaturated compounds with a C=C double bond. These two forms must show the two carbons on either end of the double bond attached to two different atoms or groups of atoms.
+One of the atoms attached to each C in the C=C double bond must be the same, and these two atoms may be on the same side (cis) of the C=C double bond, or on diagonally opposite sides of the C=C double bond (trans).
+CH2CBrCl does not have cis and trans isomers because the two H atoms are attached to the same C atom.
+CH3CHBrCl does not have cis and trans isomers because there is no C=C double bond in the molecule.
+CH3CHCHCl does have cis and trans isomers.
+
+
+
+
+
+	cis-1-chloropropene		trans-1-chloropropene
+(CH3)2CCCl2 does not have cis and trans isomers because there is only one type of atom or group attached to each C.",1,"Structure, nomenclature and properties of organic compounds",6,6,6,"Structure, nomenclature and properties of organic compounds"
+13,Question 14,"The equation below shows the equilibrium reaction for the conversion of dinitrogen tetroxide, (g), to nitrogen dioxide, NO (g). (g) 2NO (g) ∆H +58.0 kJ mol −1 Which one of the following occurs when the temperature is increased from 35 °C to 80 °C? Rate of forward reaction Rate of reverse reaction A. increases decreases B. decreases decreases C. increases increases D. decreases increases","Initially, when the temperature is increased, the rates of both the forward and backward (reverse) reactions immediately increase.
+Since the forward reaction is endothermic, the forward reaction is favoured as the system returns to equilibrium. 
+So, the rate of the forward reaction will decrease as reactant concentrations decrease BUT at the new equilibrium the rate of the forward reaction will still be higher than prior to the temperature increase. 
+The rate of the reverse reaction will further increase as the product concentrations increase.
+When equilibrium is established at 80 °C, the rates of both the forward and reverse have increased compared to the equilibrium at 35 °C.
+Alternatively, the rate of any reaction at 80 °C, exothermic or endothermic, would be expected to be higher than at 35 °C.",1,Extent of chemical reactions,4,4,4,Extent of chemical reactions
+14,Question 15,Consider two types of drone: petrol-powered and hydrogen-fuel-cell powered. Source: elnurSS/Shutterstock.com Which one of the following statements is correct about petrol-powered drones and hydrogen-fuel-cell powered drones? A. They both produce greenhouse gases. B. Only petrol-powered drones produce heat. C. They both have the same energy transformations. D. The overall reactions in hydrogen-fuel-cell powered drones are endothermic.,"Petrol-powered drones convert chemical energy into thermal energy and mechanical energy. The reaction products are CO2(g) and H2O(g).
+Hydrogen-powered drones convert chemical energy into electrical energy and thermal energy. The reaction product is H2O (g).
+Since energy is released during the reaction in both types of drones, both reactions are exothermic.
+Both CO2(g) and H2O(g) are greenhouse gases.",1,Carbon-based fuels,0,0,0,Carbon-based fuels
+15,Question 16,Consider the following molecule. How many peaks will be observed in 13 NMR spectrum of this molecule? A. B. C.,"CH3CH2CH(CH3)COOCH(CH3)2
+There are seven different carbon environments.",1,Instrumental analysis of organic compounds,9,6,9,Instrumental analysis of organic compounds
+16,Question 17,"Lignite is type of brown coal. When lignite is completely combusted in power station, 19.0 MJ/tonne of energy is released. The efficiency of the power station is 39%. What mass of lignite is required to produce 42.0 MJ of usable energy in the power station? A. 0.862 tonnes B. 1.16 tonnes C. 2.21 tonnes D. 5.67 tonnes","Since the power station is only 39% efficient, 42 MJ usable energy is only 39% of the total energy released by the lignite undergoing combustion.
+42 MJ = 0.39 x total energy released from lignite.
+Total energy = 42 / 0.39 = 107.7 MJ
+m(lignite required) 	= 107.7 MJ / 19.0 MJ tonne−1
+		= 5.67 tonne",1,Measuring changes in chemical reactions,1,1,1,Measuring changes in chemical reactions
+17,Question 18,The graph below shows the HPLC calibration curve for folic acid. 0.50 0.45 0.40 0.35 0.30 0.25 0.20 0.15 0.10 0.05 0.00 10 15 20 25 peak area Calibration curve folic acid concentration (ng mL −1 1.00 mL sample containing an unknown concentration of folic acid is diluted to 1.00 L. The diluted sample is analysed using the calibrated equipment at the same conditions. The folic acid peak area is found to be 0.35 What is the approximate folic acid concentration in the mL sample? A. 18 pg mL −1 B. 18 ng mL −1 C. 18 mL −1 D. 18 mg mL −1,"According to the calibration curve for diluted folic acid solution:
+   peak at peak area 0.35 à 18 ng mL−1 concentration.
+The sample had been diluted by a factor of 1000 (1 mL to 1 L).
+So, the concentration of the original undiluted sample was:
+   1000 x 18 ng mL−1 = 18 x 103 ng mL−1
+According to Table 6 of the Data Book:
+   1 ng = 10−3 µg so 1 µg = 103 ng
+Concentration of original sample = 18 µg L−1
+The large number of responses for ‘B’ is indicative of the failure to allow for the dilution that occurred.",1,Instrumental analysis of organic compounds,9,9,9,Instrumental analysis of organic compounds
+18,Question 19,Compare omega-6 fatty acids with saturated fatty acids containing the same number of carbon atoms. Which one of the following statements is correct? Omega-6 fatty acids A. have lower densities than saturated fatty acids. B. have higher melting points than saturated fatty acids. C. have more hydrogen atoms than saturated fatty acids. D. undergo substitution reactions more readily than saturated fatty acids.,"Omega-6 fatty acids contain a C=C double bond between the 6th and 7th carbons in the hydrocarbon chain.
+This creates a kink in the chains that prevents them from packing as close together as the chains in saturated fatty acids.
+Consequently omega-6 fatty acids have
+lower densities 
+lower melting points
+than saturated fatty acids.
+Because omega-6 fatty acids have C=C double bonds they undergo addition reactions, and having fewer hydrogen atoms in each molecule they undergo substitution reactions less readily than saturated fatty acids.",1,"Structure, nomenclature and properties of organic compounds",6,6,6,"Structure, nomenclature and properties of organic compounds"
+19,Question 20,Which one of the following is always correct when performing an accurate acid-base titration? A. Water in the burette will dilute the aliquot. B. Any acid-base indicator will give an accurate result. C. Water in the pipette causes an underestimate of the acid concentration. D. The pipette is not tapped against the conical flask to ensure accurate volume delivery.,"There was no correct or best answer to this question and all students were awarded the mark.
+Water in the burette will dilute the liquid being added from the burette and cause a larger titre for a particular indicator.
+For a specific titration, different indicators will show different endpoints and result in different titre volumes. 
+Using methyl red (pH 4.4–6.2) rather phenolphthalein (pH 8.3–10) for the titration of CH3COOH(aq) by NaOH(aq) will require a smaller titre volume and lead to a less accurate result. Both indicators may lead to precise results but only the use of the correct indicator will produce an accurate result.
+Water in the pipette reduces the concentration of the aliquot in the titration flask, causing a smaller titre to be used. So, in the titration of a base – in the aliquot – by an acid, the smaller titre volume will lead to an overestimation of the acid concentration.
+According to the Royal Australian Chemical Institute (RACI; www.raci.org.au) – ‘A Guide to Titration’:
+‘Insert the tip of the pipette well inside the titration flask, remove the filler, and allow the solution to drain with the pipette held vertically. Then touch the tip of the pipette against the side of the flask at the liquid/air interface for 10 seconds to complete the draining.’
+The distinction between touch and tap was considered too fine a distinction for students to make, and since there should be some contact between the tip of the burette and the inside of the conical flask, alternative D was also considered incorrect.",1,Investigation design,12,4,8,Laboratory analysis of organic compounds
+20,Question 21,Which one of the following statements about denaturation is correct? Denaturation A. can only be caused by changes in temperature or the addition of acids. B. causes the reversible change of protein’s shape. C. hydrolyses the primary structure of protein. D. alters the secondary structure of protein.,"Denaturation can also be caused by certain chemicals as well as changes in pH or temperature.
+Denaturation changes are generally considered as being irreversible in the environment in which they occur.
+Denaturation does not affect the primary structure.
+Denaturation alters the secondary (and tertiary and quaternary) structures.",1,Medicinal chemistry,10,6,10,Medicinal chemistry
+21,Question 22,"Methane, CH and methanol, CH OH, can both be used to power fuel cells. Methane and methanol fuel cells produce A. the same amount of greenhouse gases and the same number of electrons per mol of fuel reacted. B. the same amount of greenhouse gases and different number of electrons per mol of fuel reacted. C. different amount of greenhouse gases and the same number of electrons per mol of fuel reacted. D. different amount of greenhouse gases and different number of electrons per mol of fuel reacted.","The relevant equations and half equations are:
+CH4 + 2O2 à CO2 + 2H2O
+CH4 + 2H2O à CO2 + 8H+ + 8e−
+
+CH3OH + 1½O2 à CO2 + 2H2O
+CH3OH + H2O à CO2 + 6H+ + 6e−
+The amounts of greenhouse gas per mol of fuel are the same – 1 mol CO2 and 2 mol H2O – for both CH4 and CH3OH.
+The numbers of electrons per mol of fuel are different for the two fuels: 8 mol for CH4 and 6 mol for CH3OH.",1,Carbon-based fuels,0,0,2,Primary galvanic cells and fuel cells as sources of energy
+22,Question 23,Which one of the following is the semi-structural formula of 2-methylpent-1-ene? A. (CH CCHCH CH B. (CH CHCH CHCH C. CH C(CH )CH CH CH D. CH CHCH(CH )CH CH,"2-methylpent-1-ene.
+The structural formula is:
+Therefore, the semi-structural formula is
+CH3CH2CH2C(CH3)CH2  or  CH2C(CH3)CH2CH2CH3",1,"Structure, nomenclature and properties of organic compounds",6,6,6,"Structure, nomenclature and properties of organic compounds"
+23,Question 24,"Which one of the following statements about acidic propan-1-ol fuel cells is correct? A. Positive ions flow through the membrane to the cathode. B. The voltage decreases since the reactants are used up in the half-cell reactions. C. is formed at the negative electrode and CO is formed at the positive electrode. D. Since it is gas, is the only reactant that must have direct contact with the electrode.","Half equations in a CH3CH2CH2OH / O2 fuel cell with acid electrolyte:
+   Anode (−) C3H8O(l) + 5H2O(l)  à 3CO2(g) + 18H+(aq) + 18e−
+   Cathode (+) O2(g) + 4H+(aq) + 4e−  à 2H2O(l)
+Cations, H+(aq), flow through the electrolyte from the anode (−) to the cathode (+).
+Since there is a continuous supply of reactants, the voltage would not be expected to decrease.
+H2O is formed at the positive electrode and CO2 is formed at the negative electrode.
+All reactants must have direct contact with the relevant electrodes.",1,Primary galvanic cells and fuel cells as sources of energy,2,5,2,Primary galvanic cells and fuel cells as sources of energy
+24,Question 25,"Below are the half-equations for the lead-acid accumulator cell. The lead-acid accumulator cell can operate as an electrolytic cell. PbSO (s) (aq) 2e Pb(s) HSO (aq) 	− 0.36 PbO (s) HSO (aq) 3H (aq) 2e PbSO (s) 2H O(l) 1.69 Which one of the following correctly describes the lead-acid accumulator cell when it is operating as galvanic cell and when it is operating as an electrolytic cell? Galvanic cell Electrolytic cell A. ions react at the cathode. HSO ions react at both electrodes. B. ions react at the anode. HSO ions react at both electrodes. C. ions react at the cathode. HSO ions are produced at both electrodes. D. ions react at the anode. HSO ions are produced at both electrodes. Use the following information to answer Questions 26 and 27. student investigated the viscosity of several biofuels. The flow rate of each biofuel through narrow glass tube was measured. The results are presented in the tables below. Table 1: Flow rate (mL min −1 of biodiesels produced using sodium hydroxide, NaOH(aq), catalyst Alcohol used in biodiesel production with NaOH catalyst Methanol Ethanol Oil used in biodiesel production sunflower oil 4.8 4.4 canola oil 5.1 4.7 Table 2: Flow rate (mL min –1 of biodiesels produced using potassium hydroxide, KOH(aq), catalyst Alcohol used in biodiesel production with KOH catalyst Methanol Ethanol Oil used in biodiesel production sunflower oil 4.9 4.4 canola oil 4.8 4.6","Galvanic cell: discharge
+Anode (−)
+   Pb(s) + HSO4−(aq) à PbSO4(s) + H+(aq) + 2e−
+Cathode (+)
+   PbO2(s) + HSO4−(aq) + 3H+(aq) + 2e− à PbSO4(s) + 2H2O(l)
+
+Electrolytic cell: recharge
+Anode (+)
+   PbSO4(s) + 2H2O(l) à PbO2(s) + HSO4−(aq) + 3H+(aq) + 2e−
+Cathode (−)
+   PbSO4(s) + H+(aq) + 2e- à Pb(s) + HSO4−(aq)
+H+ ions react at the cathode in the galvanic cell.
+HSO4− ions are produced at both electrodes in the electrolytic cell.",1,Primary galvanic cells and fuel cells as sources of energy,2,2,5,Production of chemicals using electrolysis
+25,Question 26,How many independent variables are there in this investigation? A. B. C. D.,"There are three independent variables, since there are three things that would be altered by the student during the investigation:
+the type of oil – sunflower or canola
+the catalyst used – NaOH(aq) or KOH(aq)
+the alcohol used – methanol or ethanol",1,Investigation design,12,12,11,How is scientific inquiry used to investigate the sustainable production of energy and/or materials?
+26,Question 27,Select the most valid conclusion that can be drawn from the student’s results presented in Table and Table 2. A. Biodiesels made from sunflower oil have higher viscosity than biodiesels made from canola oil. B. Biodiesels made from methanol have lower viscosity than biodiesels made from ethanol. C. Biodiesels are unsuitable for use in cold climates because they have higher viscosity than petrodiesels. D. Biodiesels made using NaOH(aq) catalyst have lower viscosity than biodiesels made using KOH(aq) catalyst.,"The lower the flow rate of a biodiesel, the higher the viscosity; the higher the flow rate, the lower the viscosity.
+Using NaOH(aq) as a catalyst:
+The viscosity of canola oil is lower than the viscosity of sunflower oil for both methanol and ethanol. 
+However, the viscosities of both sunflower oil and canola oil are lower when made from methanol, since the flow rates are higher than the flow rates using ethanol.
+
+Using KOH(aq) as a catalyst:
+Methanol: viscosity of canola oil is higher than the viscosity of sunflower oil
+Ethanol: viscosity of canola oil is lower than the viscosity of sunflower oil.
+Again, the viscosities of both sunflower oil and canola oil are lower when made from methanol since the flow rates are higher than the flow rates using ethanol.
+
+Biodiesels made from methanol have a higher flow rate, and hence a lower viscosity, than biodiesels made from ethanol.
+The relative suitability of biodiesels and petrodiesel in cold climates cannot be deduced from the results presented.
+The flow rate of the biodiesel made from sunflower oil and methanol is lower when NaOH is used (4.8) than it is when KOH is used (4.9). In this instance the viscosity of the biodiesel is higher when NaOH(aq) is used than when KOH(aq) is used.",1,Carbon-based fuels,0,0,12,Investigation design
+27,Question 28,"Consider the half-cell equations and their half-cell potentials in the table below. Half-cell equations Standard electrode potential in volts at 25 °C Mn 3+ (aq) Mn 2+ (aq) +1.56 SO 2− (aq) 3H O(l) 4e 2− (aq) 6OH (aq) −0.57 SO 2− (aq) O(l) 2e SO 2− (aq) 2OH (aq) −0.94 Mn 2+ (aq) 2e Mn(s) −1.18 galvanic cell contains 2− (aq), SO 2− (aq) and OH (aq) with platinum electrode in the first half-cell and Mn 3+ (aq) and Mn 2+ (aq) in the second half-cell. All solutions are 1M solutions and the cell is at SLC. The galvanic cell will deliver A. 2.50 if the electrode in the second half-cell is Mn(s). B. 2.50 if the electrode in the second half-cell is Pt(s). C. 1.75 if the electrode in the second half-cell is Mn(s). D. 1.75 if the electrode in the second half-cell is Pt(s).","The half-cell potentials relating to the cell are:
+Mn3+(aq) + e− ⇋ Mn2+(aq)				+1.56 V
+SO42−(aq) + H2O(l) + 2e− ⇋ SO32−(aq) + 2OH−(aq) 	−0.94 V
+The cell will produce 2.50 V as SO32−(aq) is oxidised to SO42−(aq), and Mn3+(aq) is reduced to Mn2+(aq).
+In both half-cells and in each half-equation, the oxidising and reducing agents are ions in solution and the electrodes on both cells will be unreactive conductors, in this case Pt, an inert metal. Mn would be inappropriate in an Mn3+(aq)/Mn2+(aq) half-cell in any circumstance because it would be oxidised in the half-cell by Mn3+(aq).",1,Production of chemicals using electrolysis,5,2,2,Primary galvanic cells and fuel cells as sources of energy
+28,Question 29,Which one of the following statements about mass spectrometry is always correct? A. The relative molecular mass of molecule is determined from the base peak. B. The peaks in mass spectrum are caused by the presence of different isotopes. C. The base peak is formed when an uncharged species is removed from the molecule. D. The height of each peak in the mass spectrum is measured relative to the height of the base peak.,"In mass spectrometry molecules are ionised as result of bombardment with high-energy electrons. The positive ions produced are deflected in a magnetic field according to their m/z ratios.
+The relative molecular mass of a compound is determined from the significant peak with highest m/z ratio.
+The base peak is associated with the most abundant species formed during fragmentation / the base peak represents the most abundant fragment produced and the relative height of the peak at that m/z ratio is set at 100.
+The base peak represents the most common fragment produced during the impact of the electron beam on the parent molecule ion cation. It can also be formed from fragments larger than itself.
+The major peaks on a mass spectrum occur at the m/z ratios of the different fragments / ions produced in the mass spectrometer. The very small peaks, usually one m/z unit higher, may be associated with different isotopes.
+The heights of peaks on the mass spectrum are all relative to the height of the base peak, which is set at 100.",1,Instrumental analysis of organic compounds,9,9,9,Instrumental analysis of organic compounds
+29,Question 30,"At standard conditions, solutions of hydrogen peroxide, iron(III) nitrate, Fe(NO and iron(II) nitrate, Fe(NO were added to beaker. The initial concentrations of Fe(NO and Fe(NO in the beaker were all M. beaker (aq) Fe(NO (aq) Fe(NO (aq) Which one of the following statements is correct? A. Iron, Fe, is deposited at the bottom of the beaker. B. The two half-reactions in the beaker immediately produce 1.09 V. C. The concentration of (aq) decreases immediately since it is the strongest reducing agent. The temperature of the contents in the beaker decreases immediately when Fe(NO (aq) reacts with (aq)","The relative locations of the species H2O2(aq), Fe3+(aq) and Fe2+(aq) on the electrochemical series:
+H2O2(aq) + 2H+(aq) + 2e- ⇋ 2H2O(l) 		+1.77 V
+Fe3+(aq) + e- ⇋ Fe2+(aq)			+0.77 V
+O2(s) + 2H+(aq) + 2e- ⇋ H2O2(aq)		+0.68 V
+Fe2+(aq) + 2e− ⇋ Fe(s)	                	−0.44 V
+H2O2(aq) is both the strongest oxidising agent and the strongest reducing agent present.
+The equation for the redox reaction occurring will be
+2H2O2(aq) à O2(g) + 2H2O(l). 
+So, the concentration of H2O2(aq) decreases.
+The reaction cannot produce a voltage because it is not in an electrochemical cell.
+The reaction is exothermic, so the temperature of the contents increases.",1,Extent of chemical reactions,4,2,2,Primary galvanic cells and fuel cells as sources of energy
