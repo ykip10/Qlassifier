@@ -7,12 +7,15 @@ from sentence_transformers import SentenceTransformer, util
 from InstructorEmbedding import INSTRUCTOR
 
 from src.preprocessor.tree_preprocessor import std_str
+from src.Qlassifier.utils import prepare_dataframes
+from src.Qlassifier.evaluation import top3_sims
+
 
 def get_predictions(
     qn_df: pd.DataFrame,
     sd_df: pd.DataFrame,
-    labels: list[int],
     model: Union[SentenceTransformer, INSTRUCTOR],
+    labels: list[int] = [],
     subject: str = "",
     instruct: bool = False,
 ) -> tuple[pd.DataFrame, np.array, np.array]:
@@ -76,8 +79,9 @@ def get_predictions(
     pred_df["pred_topic_idx"] = best_idxs # exams prediction
     pred_df["report_pred"] = best_rp_idxs # reports prediction
 
-    pred_df["true_topic_idx"] = labels 
-    pred_df["true_topic"] = sd_df.loc[labels, "label"].reset_index(drop=True)
+    if labels: 
+        pred_df["true_topic_idx"] = labels 
+        pred_df["true_topic"] = sd_df.loc[labels, "label"].reset_index(drop=True)
 
     # Add confidence of question texts' prediction
     confidence_col = np.array([(sims[pred_idx] / sum(sims)).cpu() for pred_idx, sims in zip(best_idxs, cos_qn)])
@@ -85,3 +89,14 @@ def get_predictions(
     confidence_col = (confidence_col - min(confidence_col)) / (max(confidence_col) - min(confidence_col))
     pred_df["confidence"] = confidence_col
     return pred_df, cos_qn, cos_rp
+
+
+def run_instructor(exam_path: str):
+    subject = exam_path.parents[1].stem
+    qn_df, sd_df = prepare_dataframes(exam_path)
+    
+    model = INSTRUCTOR('hkunlp/instructor-large')
+    _, cos_qn, _ = get_predictions(qn_df, sd_df, model, subject=subject, instruct=True)
+
+    top3 = top3_sims(cos_qn)
+    return top3
