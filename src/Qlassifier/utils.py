@@ -54,6 +54,8 @@ def prepare_dataframes(exam_path: str) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     # Parsing
     ex_root, report_df, sd_root = load_data(exam_path)
+    has_mcq = ex_root.has_mcq
+
     sd_root = TreePreprocessor("study_design", remove_latex=True).preprocess(sd_root, subject=subject)
     ex_root = TreePreprocessor("past_exam", remove_latex=True).preprocess(ex_root)
 
@@ -88,8 +90,10 @@ def prepare_dataframes(exam_path: str) -> tuple[pd.DataFrame, pd.DataFrame]:
         new_dfs.append(df)
 
     rp_df = pd.concat(new_dfs).reset_index(drop=True)
-    rp_df.drop_duplicates("question")
-    rp_df = rp_df[["comments", "total_marks"]]
+    
+    if has_mcq: 
+        rp_df.drop_duplicates("question")
+    rp_df = rp_df[["comments", "total_marks"]] if "comments" in rp_df.columns else rp_df["total_marks"]
     
     ex_df = ex_df.loc[ex_df["label"].str.contains("Question", na=False), :].reset_index(drop=True)
     ex_df.drop_duplicates("label")

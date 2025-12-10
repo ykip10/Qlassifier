@@ -39,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
 		root.print_tree()
 		return 0 
 	
-	# Need to show report
+	# Need to show report, just show first table
 	print(ReportProcessor(path).parse_tables()[0])
 	return 0
 

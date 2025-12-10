@@ -20,8 +20,13 @@ def top3_sims(qn_idx: int, cos: Sequence[Sequence[float]]) -> list[tuple[int, fl
     sims = list(cos[qn_idx])
     sims_min = min(sims)
     sims_max = max(sims)
-    top3 = [((sims.index(sim) - sims_min) / (sims_max - sims_min), float(sim)) \
-            for sim in sorted(sims, reverse=True)[:3]]
+    indexed = list(enumerate(sims))
+    indexed_sorted = sorted(indexed, key=lambda x: x[1], reverse=True)[:3]
+
+    top3 = [
+        (idx, float((sim - sims_min) / (sims_max - sims_min)) if sims_max != sims_min else 1.0)
+        for idx, sim in indexed_sorted
+    ]
     return top3
 
 

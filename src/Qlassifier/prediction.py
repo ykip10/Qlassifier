@@ -34,11 +34,10 @@ def get_predictions(
     Returns the dataframe containing predictions as well as cosine similarity matrices for 
     both question-driven predictions and examiner comments-driven predictions. 
     """
-    pred_df = qn_df.loc[:(len(labels)-1)].copy()
+    pred_df = qn_df.loc[:(len(labels)-1)].copy() if labels else qn_df.copy()
     qn_input = pred_df["text"] 
-    report_input = pred_df["comments"]
+    report_input = pred_df["comments"] if "comments" in pred_df.columns else [""]*len(qn_input)
     sd_input = sd_df["label"].str.cat(sd_df["text"], sep="")
-
     # Find embeddings
     if instruct:
         if not subject: 
@@ -91,12 +90,28 @@ def get_predictions(
     return pred_df, cos_qn, cos_rp
 
 
-def run_instructor(exam_path: str):
+def run_instructor(
+    exam_path: str
+) -> tuple[
+    list[
+        list[tuple[int, float]]
+    ],
+    list[str]
+]:
+    """ Runs the instructor model on the exam at exam_path. Returns top 3 topics 
+    for each question, as well as the question labels. 
+    """
     subject = exam_path.parents[1].stem
     qn_df, sd_df = prepare_dataframes(exam_path)
     
     model = INSTRUCTOR('hkunlp/instructor-large')
     _, cos_qn, _ = get_predictions(qn_df, sd_df, model, subject=subject, instruct=True)
 
-    top3 = top3_sims(cos_qn)
-    return top3
+    top3s = []
+    labels = sd_df["label"]
+    for qn_idx in range(len(qn_df)):
+        top3 = top3_sims(qn_idx, cos_qn)
+        # Switch sd-idx for sd label instead
+        top3_with_labels = [(labels.loc[sd_idx], sim) for sd_idx, sim in top3]
+        top3s.append(top3_with_labels)
+    return top3s, list(qn_df["label"])

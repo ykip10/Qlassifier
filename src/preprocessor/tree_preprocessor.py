@@ -41,7 +41,7 @@ class TreePreprocessor:
         else:
             root.filter_tree(r"Unit(s)? (3|4)")
         
-        aos_re = r"Area of Study \d"
+        aos_re = r"Area of Study \d?$"
         # only care about content-describing sections
         root.filter_tree(aos_re)
         if not is_math:
