@@ -1,5 +1,3 @@
-from typing import Union
-
 import torch
 import pandas as pd
 import numpy as np
@@ -14,7 +12,7 @@ from src.Qlassifier.evaluation import top3_sims
 def get_predictions(
     qn_df: pd.DataFrame,
     sd_df: pd.DataFrame,
-    model: Union[SentenceTransformer, INSTRUCTOR],
+    model: SentenceTransformer | INSTRUCTOR,
     labels: list[int] = [],
     subject: str = "",
     instruct: bool = False,
@@ -22,7 +20,7 @@ def get_predictions(
     """ Given a model which is either a Sentence Transformer or extractor, 
     outputs prediction for a topic classification for each question in qn_df.
 
-    qn_df   : Dataframe containing atleast questions and examiner comments.
+    qn_df   : Dataframe containing at least questions and examiner comments.
     sd_df   : Dataframe containing study design dot points which the questions in qn_df
               should be mapped to
     labels  : Ground truth topic labels for each question
@@ -91,7 +89,9 @@ def get_predictions(
 
 
 def run_instructor(
-    exam_path: str
+    exam_path: str,
+    subject: str, 
+    model: INSTRUCTOR = INSTRUCTOR('hkunlp/instructor-large')
 ) -> tuple[
     list[
         list[tuple[int, float]]
@@ -101,10 +101,8 @@ def run_instructor(
     """ Runs the instructor model on the exam at exam_path. Returns top 3 topics 
     for each question, as well as the question labels. 
     """
-    subject = exam_path.parents[1].stem
-    qn_df, sd_df = prepare_dataframes(exam_path)
+    qn_df, sd_df = prepare_dataframes(exam_path, subject)
     
-    model = INSTRUCTOR('hkunlp/instructor-large')
     _, cos_qn, _ = get_predictions(qn_df, sd_df, model, subject=subject, instruct=True)
 
     top3s = []

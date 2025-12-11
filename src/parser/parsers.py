@@ -49,7 +49,6 @@ class PDFParser(Parser):
         self.cr_coords = cr_coords
         # might need to change later, works for current data structure but fragile
         # (probably implemented as part of pipeline)
-        self.subject_name = Path(path).parents[1].stem 
         self._doc = self.load_doc()
         self._copies = []           # keep track of copies to close
         self.qn_hierarchies_regex = [       # question splits
@@ -120,7 +119,7 @@ class PDFParser(Parser):
                     if any(matches):
                         # Initialise new node
                         curr = Tree(label=text, level=matches.index(True)+1,
-                                    page_idx=page_idx, subject_name=self.subject_name)
+                                    page_idx=page_idx)
                         nodes.append((curr, page_idx, y0))
                     elif curr is not None and ("section" or "question" not in text.lower()):
                         # normal bolded text
@@ -129,8 +128,7 @@ class PDFParser(Parser):
                     label = re.search(fallback_re, text).group().strip()
                     remaining_txt = re.sub(fallback_re, "", text)
                     curr = Tree(label=label, level=len(self.qn_hierarchies_regex)-1,
-                                page_idx=page_idx, text=remaining_txt,
-                                subject_name=self.subject_name)
+                                page_idx=page_idx, text=remaining_txt)
                     nodes.append((curr, page_idx, y0))
                 elif curr:
                     # ordinary text
@@ -145,7 +143,7 @@ class PDFParser(Parser):
         nodes.sort(key=lambda t: (t[1], t[2]))  
         nodes = [text for text, page_num, y0 in nodes] 
 
-        root = Tree(label="root", level=0, subject_name=self.subject_name)
+        root = Tree(label="root", level=0)
         root.build(nodes)
         return root
 
@@ -215,7 +213,6 @@ class WordParser(Parser):
         """
         self.path = path
         self.doc = self._load_doc()
-        self.subject_name = Path(path).parents[1].stem 
 
     def parse(self) -> Tree: 
         """ Return a list of (level, text) for headings found in the document 
@@ -271,8 +268,7 @@ class WordParser(Parser):
                         section_level = qn_level - 1
 
                 level = qn_level if qn_match else section_level
-                curr = Tree(label=text, level=level, page_idx=page_idx,
-                            subject_name=self.subject_name)
+                curr = Tree(label=text, level=level, page_idx=page_idx)
                 headings.append(curr)
                 continue
                 
@@ -285,13 +281,12 @@ class WordParser(Parser):
                         level = int(part)
                         break
                 curr = Tree(label=text, level=level,
-                            page_idx=page_idx,
-                            subject_name=self.subject_name)
+                            page_idx=page_idx)
                 headings.append(curr)
             elif curr: 
                 curr.text += " " + text
         # Build the tree then return
-        root = Tree(label="root", level=0, subject_name=self.subject_name)
+        root = Tree(label="root", level=0)
         root.build(headings)
         return root
 
