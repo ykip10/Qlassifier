@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 import pandas as pd 
 
@@ -70,10 +71,12 @@ def prepare_dataframes(exam_path: str, subject: str) -> tuple[pd.DataFrame, pd.D
     if is_math: # math study design slightly different formatting to the usual
         sd_root.collapse(sd_level, sep=": ")
 
+    # Convert to df
     ex_df = ex_root.to_df(include_root=False)
     sd_df = sd_root.to_df(include_root=False, level=sd_level if is_math else 0)
     
     if not is_math: 
+        # Again, this is because math s/d's are different since they're all merged into one
         sd_df = sd_df.loc[
             ~(sd_df["label"].str.contains(
                 r"(Unit \d)|(Area of Study \d)|(Key Knowledge)|(Outcome \d)", case=False, na=False
@@ -84,6 +87,7 @@ def prepare_dataframes(exam_path: str, subject: str) -> tuple[pd.DataFrame, pd.D
     ex_df.drop_duplicates("label")
 
     if report_df is not None:
+        # Need to merge report data into the questions data
         rp_dfs = [df for df in report_df]
 
         # add marks column
@@ -97,12 +101,19 @@ def prepare_dataframes(exam_path: str, subject: str) -> tuple[pd.DataFrame, pd.D
 
         rp_df = pd.concat(new_dfs).reset_index(drop=True)
         
-        if has_mcq: 
+        if has_mcq:
             rp_df.drop_duplicates("question")
         rp_df = rp_df[["comments", "total_marks"]] if "comments" in rp_df.columns else rp_df["total_marks"]
         qn_df = pd.concat([ex_df, rp_df], axis=1)
     else:
         qn_df = ex_df
-
-    
     return qn_df, sd_df
+
+
+def normalise_question_label(s: str) -> str:
+    """ Normalises question labels which become like Question 1.\tc\ti after collapsing.
+    Normalises to be of the form Question 1ci. instead. 
+    """
+    pref = re.search(r"Question \d{1,2}", s).group()
+    suff = "".join(c for c in s.replace(pref, "") if c.isalnum())
+    return pref + suff + "."

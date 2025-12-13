@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from src.api.endpoints.classifier import router as instructor_router
+from src.api.endpoints.embeddings import router as instructor_router
 
 app = FastAPI()
 

@@ -30,6 +30,25 @@ def top3_sims(qn_idx: int, cos: Sequence[Sequence[float]]) -> list[tuple[int, fl
     return top3
 
 
+def build_top3s(
+    sd_labels: pd.Series,
+    cos: Sequence[Sequence[float]],
+    ndigits: int | None = None
+) -> list[list[tuple[str, float]]]:
+    """ Finds the top3 predictions of the form [(topic_prediction, normalised_sim)...] 
+    for each question, where the similarity is optionally rounded to `ndigits` decimal points. """
+    top3s = []
+    for qn_idx in range(len(cos)):
+        top3 = top3_sims(qn_idx, cos)
+        # Switch sd-idx for the actual sd label instead,
+        if round is not None: 
+            top3_with_labels = [(sd_labels[sd_idx], round(sim, ndigits)) for sd_idx, sim in top3]
+        else: 
+            top3_with_labels = [(sd_labels[sd_idx], sim) for sd_idx, sim in top3]
+        top3s.append(top3_with_labels)
+    return top3s
+
+
 def correct_in_top3(
     qn_idx: int,
     df: pd.DataFrame,
