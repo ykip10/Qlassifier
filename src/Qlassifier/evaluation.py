@@ -41,7 +41,7 @@ def build_top3s(
     for qn_idx in range(len(cos)):
         top3 = top3_sims(qn_idx, cos)
         # Switch sd-idx for the actual sd label instead,
-        if round is not None: 
+        if ndigits is not None: 
             top3_with_labels = [(sd_labels[sd_idx], round(sim, ndigits)) for sd_idx, sim in top3]
         else: 
             top3_with_labels = [(sd_labels[sd_idx], sim) for sd_idx, sim in top3]

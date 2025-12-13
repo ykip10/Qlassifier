@@ -46,8 +46,8 @@ def run_pipeline(
 
     if len(argv) == 2: 
         # Run combined model
-        qn_labels, sd_labels, cos = run_combined(path, subject, tf_idf_weight=0.1)
-        top3s = build_top3s(sd_labels, cos)
+        qn_labels, sd_labels, cos = run_combined(path, subject, tf_idf_weight=0.3)
+        top3s = build_top3s(sd_labels, cos, ndigits=3)
         for qn_idx in range(len(top3s)):
             qn = qn_labels[qn_idx]
             print(f"{qn}: {top3s[qn_idx]}")
