@@ -13,7 +13,7 @@ from InstructorEmbedding import INSTRUCTOR
 
 from src.preprocessor.tree_preprocessor import std_str
 from src.Qlassifier.utils import prepare_dataframes
-
+from src.Qlassifier.results import Results
 
 #class Predictor(ABC):
 #    @abstractmethod
@@ -29,46 +29,48 @@ def run_combined(
     *,
     model: INSTRUCTOR | None = None,
     **vectorizerargs: dict[str, Any],
-) -> tuple[
-    pd.DataFrame, 
-    list[str], 
-    torch.FloatTensor
-]:
+) -> Results:
     """ Runs both an INSTRUCTOR model and tf-idf model, then merges predictions. 
     It finds the normalised cosine matrices for each model then computes the element-wise
     vector sum, where the tf_idf predictions are weighed by `tf_idf_weight`, before
     renormalising.
     """
-    qn_labels, cos_inst = run_instructor(
+    inst_results = run_instructor(
         exam_path,
         subject,
         model=model
     )
-    sd_labels, cos_tf = run_tf_idf(
+    tf_results = run_tf_idf(
         exam_path,
         subject,
         include_report=False,
         **vectorizerargs
-    )[1:]
+    )
+    cos_inst = inst_results.cos
+    cos_tf = tf_results.cos
+    sd_labels = inst_results.sd_labels
     # Compute weighted sum of similarities then re-normalise
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    cos_tf = torch.from_numpy(cos_tf).float().to(device)
+    cos_inst = cos_inst.cpu().numpy()
     cos = cos_inst + tf_idf_weight * cos_tf
 
-    row_maxes = cos.max(dim=1, keepdim=True).values
-    row_mins = cos.min(dim=1, keepdim=True).values
+    # min-max normalise (within predictions)
+    row_maxes = cos.max(axis=1, keepdims=True)
+    row_mins  = cos.min(axis=1, keepdims=True)
     cos = (cos - row_mins) / (row_maxes - row_mins)
-    return qn_labels, sd_labels, cos  
+
+    # update prediction df
+    pred_df = inst_results.pred_df.copy()
+    pred_df["pred_topic_idx"] = cos.argmax(axis=1)
+
+    results = Results(pred_df, cos, sd_labels)
+    return results
 
 
 def run_instructor(
     exam_path: str,
     subject: str, 
     model: INSTRUCTOR | None = None
-) -> tuple[
-    list[str],
-    torch.FloatTensor
-]:
+) -> Results:
     """ Runs the instructor model on the exam at exam_path. Returns Question labels 
     and the cosine similarity matrix.
     """
@@ -77,8 +79,8 @@ def run_instructor(
         model = INSTRUCTOR('hkunlp/instructor-large')
 
     qn_df, sd_df = prepare_dataframes(exam_path, subject)
-    cos_qn = get_predictions(qn_df, sd_df, model, subject=subject, instruct=True)[1]
-    return list(qn_df["label"]), cos_qn
+    results = get_predictions(qn_df, sd_df, model, subject=subject)
+    return results
 
 
 def run_tf_idf(
@@ -87,7 +89,7 @@ def run_tf_idf(
     labels: list[str] | None = None,
     include_report: bool = True,
     **vectorizerargs
-) -> tuple[pd.DataFrame, pd.Series, torch.FloatTensor]:
+) -> Results:
     """ Runs TF-IDF on an exam and the subject's study design.
     Returns:
         - dataframe containing predictions (optionally with correct labels, if provided)
@@ -135,7 +137,9 @@ def run_tf_idf(
         pred_df["true_topic_idx"] = labels 
         pred_df["true_topic"] = sd_df.loc[labels, "label"].reset_index(drop=True)
     pred_df["confidence"] = conf_col
-    return pred_df, sd_df["label"], cos
+
+    results = Results(pred_df, cos, list(sd_df["label"]))
+    return results
 
 
 def get_predictions(
@@ -144,7 +148,7 @@ def get_predictions(
     model: SentenceTransformer | INSTRUCTOR,
     subject: str,
     labels: list[int] | None = None,
-) -> tuple[pd.DataFrame, torch.FloatTensor, torch.FloatTensor]:
+) -> Results:
     """ Given a transformers model which is either a Sentence Transformer or extractor, 
     outputs prediction for a topic classification for each question in qn_df.
 
@@ -220,6 +224,8 @@ def get_predictions(
     # Map to [0, 1]
     conf_col = ((conf_col - min(conf_col)) / (max(conf_col) - min(conf_col))).tolist()
     pred_df["confidence"] = conf_col
-    return pred_df, cos_qn, cos_rp
+
+    results = Results(pred_df, cos_qn, sd_df["label"])
+    return results
 
 
