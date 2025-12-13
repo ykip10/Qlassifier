@@ -1,6 +1,7 @@
 """ This model contains all logic relating to running the model on an input exam. """
 
 from typing import Any
+from abc import ABC, abstractmethod
 
 import torch
 import pandas as pd
@@ -12,6 +13,14 @@ from InstructorEmbedding import INSTRUCTOR
 
 from src.preprocessor.tree_preprocessor import std_str
 from src.Qlassifier.utils import prepare_dataframes
+
+
+#class Predictor(ABC):
+#    @abstractmethod
+#    def run(self) -> Result
+#
+#class TfidfPredictor
+
 
 def run_combined(
     exam_path: str,
@@ -49,7 +58,7 @@ def run_combined(
     row_maxes = cos.max(dim=1, keepdim=True).values
     row_mins = cos.min(dim=1, keepdim=True).values
     cos = (cos - row_mins) / (row_maxes - row_mins)
-    return qn_labels, sd_labels, cos
+    return qn_labels, sd_labels, cos  
 
 
 def run_instructor(
@@ -60,8 +69,8 @@ def run_instructor(
     list[str],
     torch.FloatTensor
 ]:
-    """ Runs the instructor model on the exam at exam_path. Returns top 3 topics 
-    for each question, as well as the question labels. 
+    """ Runs the instructor model on the exam at exam_path. Returns Question labels 
+    and the cosine similarity matrix.
     """
     if model is None: 
         # Default model 
@@ -133,9 +142,8 @@ def get_predictions(
     qn_df: pd.DataFrame,
     sd_df: pd.DataFrame,
     model: SentenceTransformer | INSTRUCTOR,
-    labels: list[int] = [],
-    subject: str = "",
-    instruct: bool = False,
+    subject: str,
+    labels: list[int] | None = None,
 ) -> tuple[pd.DataFrame, torch.FloatTensor, torch.FloatTensor]:
     """ Given a transformers model which is either a Sentence Transformer or extractor, 
     outputs prediction for a topic classification for each question in qn_df.
@@ -147,23 +155,28 @@ def get_predictions(
     model   : Any SentenceTransformer or INSTRUCTOR model. 
     subject : The subject the examination is assessing. Only needed if instruct == True
               (in which case it is required)
-    instruct: Whether or not we should input instruction into the model (INSTRUCTOR model only). 
 
     Returns the dataframe containing predictions as well as cosine similarity matrices for 
     both question-driven predictions and examiner comments-driven predictions. 
     """
+    instruct = isinstance(model, INSTRUCTOR) 
+
     pred_df = qn_df.loc[:(len(labels)-1)].copy() if labels else qn_df.copy()
-    qn_input = pred_df["text"] 
+    qn_input = pred_df["text"]
+    # we don't always have a comments column
     report_input = pred_df["comments"] if "comments" in pred_df.columns else [""]*len(qn_input)
     sd_input = sd_df["label"].str.cat(sd_df["text"], sep="")
     # Find embeddings
     if instruct:
         if not subject: 
-            raise ValueError("If calling with instruct==True, must have subject non-empty.")
+            raise ValueError("If calling with instructor model, must have subject non-empty.")
+        if "math" in subject:
+            # Instructor doesn't really understand "Specialist Mathematics"
+            subject = "Mathematics" 
 
-        sd_instruct = f"Represent this {std_str(subject)} topic:"
-        report_instruct = f"Represent this {std_str(subject)} examination report comment:"
-        qn_instruct = f"Represent this {std_str(subject)} question"
+        sd_instruct = f"Represent this {std_str(subject)} topic for semantic search: "
+        report_instruct = f"Represent this {std_str(subject)} examination report comment: "
+        qn_instruct = f"Represent this {std_str(subject)} question for semantic search: "
 
         sd_emb = model.encode(
             [[sd_instruct, input] for input in sd_input],
@@ -198,7 +211,7 @@ def get_predictions(
     pred_df["pred_topic_idx"] = best_idxs # exams prediction
     pred_df["report_pred"] = best_rp_idxs # reports prediction
 
-    if labels: 
+    if labels is not None: 
         pred_df["true_topic_idx"] = labels 
         pred_df["true_topic"] = sd_df.loc[labels, "label"].reset_index(drop=True)
 

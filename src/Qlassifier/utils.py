@@ -49,14 +49,18 @@ def load_data(exam_path: str, subject: str, load_report: bool = False) -> tuple[
     return ex_root, reports_df, sd_root
 
 
-def prepare_dataframes(exam_path: str, subject: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+def prepare_dataframes(
+    exam_path: str,
+    subject: str,
+    load_report: bool = False,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """ Parses exams at the exam_path as well as the associated study designs and reports. 
     Performs some preprocessing then returns the exams as dataframes. 
     """
     is_math = "math" in subject
 
     # Parsing
-    ex_root, report_df, sd_root = load_data(exam_path, subject)
+    ex_root, report_df, sd_root = load_data(exam_path, subject, load_report)
     has_mcq = ex_root.has_mcq
 
     sd_root = TreePreprocessor("study_design", remove_latex=True).preprocess(sd_root, subject=subject)
@@ -100,7 +104,6 @@ def prepare_dataframes(exam_path: str, subject: str) -> tuple[pd.DataFrame, pd.D
             new_dfs.append(df)
 
         rp_df = pd.concat(new_dfs).reset_index(drop=True)
-        
         if has_mcq:
             rp_df.drop_duplicates("question")
         rp_df = rp_df[["comments", "total_marks"]] if "comments" in rp_df.columns else rp_df["total_marks"]

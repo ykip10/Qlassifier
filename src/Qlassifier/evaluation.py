@@ -78,10 +78,10 @@ def evaluate_predictions(
     """
     if not pred_cols or len(pred_cols) > 2: 
         raise ValueError("pred_cols argument must be a list of length 1 or 2.")
-
+    elif cos2 is not None and len(pred_cols) == 1: 
+        raise ValueError("Two similarity matrices were given but pred_cols has length 1")
+    
     pred1 = pred_cols[0]
-    if len(pred_cols) == 2:
-        pred2 = pred_cols[1]
 
     n = len(df)
     print("--EVAL METRICS--")
@@ -89,6 +89,8 @@ def evaluate_predictions(
     print(f"{pred1} accuracy: {100*ex_correct_pc:.2f}%")
 
     if cos2 is not None:
+        pred2 = pred_cols[1]
+        # Print data w.r.t second similarity column as well
         rp_correct_pc = len(df[df["true_topic_idx"] == df[pred2]]) / n
         one_correct_pc = len(
             df[(df["true_topic_idx"] == df[pred1]) |
@@ -97,7 +99,7 @@ def evaluate_predictions(
         
         print(f"{pred2} accuracy: {100*rp_correct_pc:.2f}%")
         
-        print(f"The percent of time either {pred2} or {pred1}"
+        print(f"The percent of time either {pred2} or {pred1} "
               f"labels a question correctly is {100*one_correct_pc:.2f}%")
         
         print(f"% of time the true topic in top 3 {pred2} prediction: " 
