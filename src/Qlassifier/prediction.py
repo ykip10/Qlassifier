@@ -1,7 +1,7 @@
 """ This model contains all logic relating to running the model on an input exam. """
 
 from typing import Any
-from abc import ABC, abstractmethod
+#from abc import ABC, abstractmethod
 
 import torch
 import pandas as pd
@@ -15,11 +15,9 @@ from src.preprocessor.tree_preprocessor import std_str
 from src.Qlassifier.utils import prepare_dataframes
 from src.Qlassifier.results import Results
 
-#class Predictor(ABC):
-#    @abstractmethod
-#    def run(self) -> Result
-#
-#class TfidfPredictor
+# class Predictor(ABC):             || TO IMPLEMENT (maybe, if it's worth it)
+#     @abstractmethod
+#     def run(self) -> Result
 
 
 def run_combined(
@@ -227,5 +225,3 @@ def get_predictions(
 
     results = Results(pred_df, cos_qn, sd_df["label"])
     return results
-
-

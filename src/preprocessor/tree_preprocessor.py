@@ -46,10 +46,10 @@ class TreePreprocessor:
         root.filter_tree(aos_re)
         if not is_math:
             return root
+        
         # Math study designs have a rigid structure, but inconsistent formatting
         # In particular, the first sub-heading under "Area of Study \d" give a short description
         # of the Area of Study, then sub-sub-headings only, until the next area of study. 
-        
         aos_level = root.find_node_level(aos_re)
         aos_nodes = root.get_nodes_at_level(aos_level)
 

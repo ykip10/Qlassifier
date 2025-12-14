@@ -1,7 +1,13 @@
-from typing import Sequence
+from typing import Sequence, Literal
 
-from matplotlib import pyplot as plt
 import pandas as pd
+import numpy as np 
+from torch import Tensor
+from matplotlib import pyplot as plt
+from sklearn.metrics import (precision_score, recall_score, accuracy_score,
+                             f1_score, top_k_accuracy_score)
+
+
 
 
 class Results:
@@ -9,11 +15,13 @@ class Results:
         self,
         pred_df: pd.DataFrame,
         cos: Sequence[Sequence[float]],
-        sd_labels: list[str] | None = None, 
+        sd_labels: list[str] | None = None,
+        *, 
         correct_topics: list[str] | None = None,
         idx_pred_col: str = "pred_topic_idx"
     ):  
         """ Object containing model results. 
+
         pred_df       : DataFrame containing model predictions.
         cos           : Cosine similarity matrix from models predictions.
         sd_labels     : Study design topic labels.
@@ -22,12 +30,127 @@ class Results:
 
         Note that many evaluation methods ASSUME the columns of pred_df. 
         """
-        self.pred_df = pred_df
-        self.cos = cos
+
+        self._pred_df = pred_df
+        # Convert to numpy for compatibility with pandas
+        if isinstance(cos, Tensor):
+            self.cos = cos.cpu().numpy()
+        else:
+            self.cos = cos
         self.sd_labels = sd_labels if sd_labels is not None else []
-        self.correct_topics = correct_topics if correct_topics is not None else []
+        
+        self._correct_topics = correct_topics if correct_topics is not None else []
         self.idx_pred_col = idx_pred_col
+
         self.qn_labels = pred_df["label"]
+    
+    @property 
+    def pred_df(self):
+        return self._pred_df.copy()
+
+    @property
+    def correct_topics(self):
+        return self._correct_topics
+    
+    @correct_topics.setter
+    def correct_topics(self, value):
+        """ Edit pred_df to include the new labels. """
+        self._pred_df["true_topic_idx"] = value
+        self._correct_topics = value
+
+    def summary(
+        self, by: Literal["topic", "overall"]
+    ) -> pd.DataFrame | pd.Series | None: 
+        """ Produces a summary of results stored in a DataFrame. 
+        
+        If `by == "topic"`, calculates precision, recall, f1-scores, accuracy and  per topic. 
+        If `by == "overall"`, calculates 
+        """
+        df = self.pred_df
+        df["pred_topic"] = df["pred_topic_idx"].apply(lambda x: self.sd_labels[x])
+
+        # Get metrics in the case where we have labelled data
+        if self.correct_topics:
+            df["true_topic"] = df["true_topic_idx"].apply(lambda x: self.sd_labels[x])
+
+            topic_counts = df["true_topic"].value_counts().astype(int)
+            topic_proportions = topic_counts / sum(topic_counts)
+            # Find precision, recall, f1-score and accuracy
+            # In the case of overall summary, we use macro-precision 
+            # since for single-label multi-class classification, micro-metrics == Accuracy
+            precisions = precision_score(
+                y_true=df["true_topic"],
+                y_pred=df["pred_topic"],
+                labels=self.sd_labels,
+                average=None if by=="topic" else "macro",
+                zero_division=0,
+            )
+            recalls = recall_score(
+                y_true=df["true_topic"],
+                y_pred=df["pred_topic"],
+                labels=self.sd_labels,
+                average=None if by=="topic" else "macro",
+                zero_division=0,
+            )
+            f1s = f1_score(
+                y_true=df["true_topic"],
+                y_pred=df["pred_topic"],
+                labels=self.sd_labels,
+                average=None if by=="topic" else "macro",
+                zero_division=0,
+            )
+            
+        # Need to produce topic-level metrics
+        if by == "topic":
+            # Create df where columns are sd_labels and rows are metrics
+            pred_topic_counts = df["pred_topic"].value_counts().astype(int)
+            pred_topic_proportions = pred_topic_counts / sum(pred_topic_counts)
+            metrics = pd.DataFrame(
+                [pred_topic_counts, pred_topic_proportions],
+                index=["Predicted Topic Counts", "Predicted Topic Proportions"],
+            ).reindex(self.sd_labels, axis=1, fill_value=0)
+
+            if self.correct_topics:
+                precision_row = pd.Series(precisions, index=self.sd_labels)
+                recall_row = pd.Series(recalls, index=self.sd_labels)
+                f1_row = pd.Series(f1s, index=self.sd_labels)
+                indices = ["Topic Count", "Topic Proportion", "Precision", 
+                           "Recall", "F1-Score"]
+
+                additional_metrics = pd.DataFrame(
+                    data=[topic_counts, topic_proportions, precision_row,
+                          recall_row, f1_row],
+                    index=indices,
+                    columns=self.sd_labels               
+                )
+                metrics = pd.concat([metrics, additional_metrics]).fillna(value=0)
+
+        # Overall metrics (global)
+        elif by == "overall":
+            if not self.correct_topics:
+                print("Cannot summarise with `by==overall` if " \
+                      "`Results` initialised with no labels.")
+                return None
+            accuracy = accuracy_score(
+                y_true=df["true_topic"],
+                y_pred=df["pred_topic"],
+            )
+            top3_accuracy = top_k_accuracy_score(
+                y_true=df["true_topic_idx"],
+                y_score=self.cos,
+                k=3,
+                normalize=True,
+                labels=range(len(self.sd_labels))  
+            )
+            metrics = pd.Series(
+                data=[accuracy, top3_accuracy, precisions, recalls, f1s],
+                index=["Accuracy", "Top 3 Accuracy", "Macro-Precision", 
+                       "Macro-Recall", "Macro-F1-Score"]
+            )
+        else: 
+            raise ValueError("`by` argument can only be one of `['topic', 'overall']`")
+    
+        return metrics
 
     def print_all_sims(self, qn_idx: int):
         """ Prints similarites for a question's predictions. """
@@ -103,10 +226,11 @@ class Results:
         pred_cols: Column(s) (up to two) which contain topic predictions. 
         """
         pred1 = self.idx_pred_col
-        n = len(self.pred_df)
+        df = self.pred_df
+        n = len(df)
 
         print("--EVAL METRICS--")
-        ex_correct_pc = len(self.pred_df[self.pred_df["true_topic_idx"] == self.pred_df[pred1]]) / n
+        ex_correct_pc = len(df[df["true_topic_idx"] == df[pred1]]) / n
         print(f"{pred1} accuracy: {100*ex_correct_pc:.2f}%")
 
         if cos2 is not None:
@@ -114,13 +238,13 @@ class Results:
             # Print data w.r.t second similarity column as well
 
             # Calculate the accuracy of our second column 
-            rp_correct_pc = len(self.pred_df[self.pred_df["true_topic_idx"] == self.pred_df[pred2]]) / n
+            rp_correct_pc = len(df[df["true_topic_idx"] == df[pred2]]) / n
 
             # Calculate the amount of times either one of our two columns got the correct topic
             one_correct_pc = len(
-                self.pred_df[
-                    (self.pred_df["true_topic_idx"] == self.pred_df[pred1]) |
-                    (self.pred_df["true_topic_idx"] == self.pred_df[pred2])
+                df[
+                    (df["true_topic_idx"] == df[pred1]) |
+                    (df["true_topic_idx"] == df[pred2])
                 ]
             ) / n  
             
@@ -136,7 +260,7 @@ class Results:
             print(
                 f"% of time the true topic in top 3 {pred2} prediction: " 
                 f"{100*(sum([
-                    self.correct_in_top3(qn_idx,self.pred_df,cos2) for qn_idx in range(n)
+                    self.correct_in_top3(qn_idx,df,cos2) for qn_idx in range(n)
                 ]) / n):.2f}%"
             )
 
@@ -144,7 +268,7 @@ class Results:
         print(
             f"% of time the true topic in top 3 {pred1} prediction: "
             f"{100*(sum([
-                self.correct_in_top3(qn_idx,self.pred_df,self.cos) for qn_idx in range(n)
+                self.correct_in_top3(qn_idx,df,self.cos) for qn_idx in range(n)
             ]) / n):.2f}%"
         )
 
@@ -152,11 +276,9 @@ class Results:
         """ Creates boxplots of the confidence parameter from a predictions dataframe, grouped by 
         correct/incorrect answers. Used to assess the usefulness of the confidence metric. 
         """
-        if "confidence" not in self.pred_df.columns:
-            raise KeyError("There is no confidence column in pred_df. Nothing to plot.")
-
-        incorrect_df = self.df[self.df["pred_topic_idx"] != self.pred_df["true_topic_idx"]]
-        correct_df = self.pred_df[self.pred_df["pred_topic_idx"] == self.pred_df["true_topic_idx"]]
+        df = self.pred_df
+        incorrect_df = df[df["pred_topic_idx"] != df["true_topic_idx"]]
+        correct_df = df[df["pred_topic_idx"] == df["true_topic_idx"]]
 
         _, ax = plt.subplots()
 

@@ -67,23 +67,33 @@ def prepare_dataframes(
     ex_root = TreePreprocessor("past_exam", remove_latex=True).preprocess(ex_root)
 
     ex_level = ex_root.find_node_level(r"Question")
+
+    # +1 for math s/d's since we want to collapse exactly one indentation after 
+    # Area of study headers 
     sd_level = sd_root.find_node_level(r"Outcome \d") if not is_math \
                 else (sd_root.find_node_level(r"Area of Study \d") + 1)
     
     ex_root.collapse(ex_level)
 
-    if is_math: # math study design slightly different formatting to the usual
+    if is_math:
+        # For math study designs, need to collapse to get 
+        # full label context
         sd_root.collapse(sd_level, sep=": ")
-
+    else:
+        # For non-math study designs, dot points are under outcomes. 
+        sd_root.filter_tree(r"Outcome \d")
     # Convert to df
     ex_df = ex_root.to_df(include_root=False)
     sd_df = sd_root.to_df(include_root=False, level=sd_level if is_math else 0)
     
     if not is_math: 
         # Again, this is because math s/d's are different since they're all merged into one
+        # Remove all rows not directly related to the relevant subtopics
         sd_df = sd_df.loc[
             ~(sd_df["label"].str.contains(
-                r"(Unit \d)|(Area of Study \d)|(Key Knowledge)|(Outcome \d)", case=False, na=False
+                r"(Unit \d)|(Area of Study \d)|(Key Knowledge)|(Outcome \d)",
+                case=False,
+                na=False
             ) | sd_df["text"].str.contains("In this area of study"))
         ].reset_index(drop=True)
 
