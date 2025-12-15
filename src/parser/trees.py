@@ -8,15 +8,18 @@ import re
 import pandas as pd
 
 class Tree:
-    """ Trees contain data on all processed documents in this project. 
+    """ Trees are intermediate data structures used to store parsed data in this project. 
     The attributes of a tree are:
 
-    label   : Title of the node. if the node represents a question, this would include the question number
-    level   : Distance from the root node
-    children: Immediate child nodes
-    parent  : Parent node
-    text    : Text directly underneath the header, from whatever document the tree was processed from 
-    marks   : If the node represents a question, this stores the number of marks available in the question. Otherwise, it is 0. 
+    `label`   : Title of the node. if the node represents a question, this would 
+                include the question number
+    `level`   : Distance from the root node
+    `children`: Immediate child nodes
+    `parent`  : Parent node
+    `text`    : Text directly underneath the header, from whatever document 
+                the tree was processed from 
+    `marks`   : If the node represents a question, this stores the number 
+                of marks available in the question. Otherwise, it is 0. 
     """
     def __init__(
         self, 
@@ -29,12 +32,12 @@ class Tree:
     ):
         """ Initialises Tree object. 
 
-        label       : Title of the node.
-        level       : Distance from the tree root. 
-        page_idx    : Which page the label was found
-        subject_name: If applicable, the name of the subject w.r.t which the tree is relevant
-        text        : Description of each node 
-        marks       : If the node references a question, stores the number of marks.
+        `label`       : Title of the node.
+        `level`       : Distance from the tree root. 
+        `page_idx`    : Which page the label was found
+        `subject_name`: If applicable, the name of the subject w.r.t which the tree is relevant
+        `text`        : Description of each node 
+        `marks`       : If the node references a question, stores the number of marks.
         """
         self.label = label
         self.level = level
@@ -150,10 +153,10 @@ class Tree:
             Level 3: Empty
         
         Args:
-        level       : level to collapse at 
-        sep         : Character to use as a separator between labels when concatenating
-        concat_label: Boolean flag indicating whether or not we should concatenate labels
-                      (as opposed to just using the child's label)
+        `level`       : level to collapse at 
+        `sep`         : Character to use as a separator between labels when concatenating
+        `concat_label`: Boolean flag indicating whether or not we should concatenate labels
+                        (as opposed to just using the child's label)
         """
 
         # Approach: iterate over all nodes at the collapsing level 
@@ -207,13 +210,13 @@ class Tree:
     
     def to_df(self, include_root: bool = True, level=0):
         """ Converts the tree to a pandas DataFrame with columns:
-        label: node label
-        text : associated text for the node
+        `label`: node label
+        `text` : associated text for the node
 
-        If level==0, 
+        If `level==0`, 
         Traverses the tree in depth-first order and optionally includes the root node.
 
-        If level > 0, only converts the nodes at level into a df.
+        If `level>0`, only converts the nodes at level into a df.
         """
         if level: 
             nodes = self.get_nodes_at_level(level)

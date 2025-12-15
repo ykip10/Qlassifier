@@ -8,8 +8,6 @@ from sklearn.metrics import (precision_score, recall_score, accuracy_score,
                              f1_score, top_k_accuracy_score)
 
 
-
-
 class Results:
     def __init__(
         self,
@@ -22,15 +20,14 @@ class Results:
     ):  
         """ Object containing model results. 
 
-        pred_df       : DataFrame containing model predictions.
-        cos           : Cosine similarity matrix from models predictions.
-        sd_labels     : Study design topic labels.
-        correct_topics: Ground truth topic labels, if available.
-        idx_pred_col  : Which column of pred_df contains the topic index prediction.
+        `pred_df`       : DataFrame containing model predictions.
+        `cos`           : Cosine similarity matrix from models predictions.
+        `sd_labels`     : Study design topic labels.
+        `correct_topics`: Ground truth topic labels, if available.
+        `idx_pred_col`  : Which column of `pred_df` contains the topic index prediction.
 
-        Note that many evaluation methods ASSUME the columns of pred_df. 
+        Note that many evaluation methods ASSUME the columns of `pred_df`. 
         """
-
         self._pred_df = pred_df
         # Convert to numpy for compatibility with pandas
         if isinstance(cos, Tensor):
@@ -54,8 +51,11 @@ class Results:
     
     @correct_topics.setter
     def correct_topics(self, value):
-        """ Edit pred_df to include the new labels. """
+        """ Edit `pred_df` to include the new ground truth labels. """
         self._pred_df["true_topic_idx"] = value
+        self._pred_df["true_topic"] = self._pred_df["true_topic_idx"].apply(
+            lambda x: self.sd_labels[x]
+        )
         self._correct_topics = value
 
     def summary(
@@ -78,27 +78,17 @@ class Results:
             # Find precision, recall, f1-score and accuracy
             # In the case of overall summary, we use macro-precision 
             # since for single-label multi-class classification, micro-metrics == Accuracy
-            precisions = precision_score(
-                y_true=df["true_topic"],
-                y_pred=df["pred_topic"],
-                labels=self.sd_labels,
-                average=None if by=="topic" else "macro",
-                zero_division=0,
-            )
-            recalls = recall_score(
-                y_true=df["true_topic"],
-                y_pred=df["pred_topic"],
-                labels=self.sd_labels,
-                average=None if by=="topic" else "macro",
-                zero_division=0,
-            )
-            f1s = f1_score(
-                y_true=df["true_topic"],
-                y_pred=df["pred_topic"],
-                labels=self.sd_labels,
-                average=None if by=="topic" else "macro",
-                zero_division=0,
-            )
+            scores = []
+            scoring_metrics = [precision_score, recall_score, f1_score]
+            for metric in scoring_metrics: 
+                score = metric(
+                    y_true=df["true_topic"],
+                    y_pred=df["pred_topic"],
+                    labels=self.sd_labels,
+                    average=None if by=="topic" else "macro",
+                    zero_division=0,
+                )
+                scores.append(score)
             
         # Need to produce topic-level metrics
         if by == "topic":
@@ -111,15 +101,12 @@ class Results:
             ).reindex(self.sd_labels, axis=1, fill_value=0)
 
             if self.correct_topics:
-                precision_row = pd.Series(precisions, index=self.sd_labels)
-                recall_row = pd.Series(recalls, index=self.sd_labels)
-                f1_row = pd.Series(f1s, index=self.sd_labels)
+                score_rows = [pd.Series(score, index=self.sd_labels) for score in scores]
                 indices = ["Topic Count", "Topic Proportion", "Precision", 
                            "Recall", "F1-Score"]
 
                 additional_metrics = pd.DataFrame(
-                    data=[topic_counts, topic_proportions, precision_row,
-                          recall_row, f1_row],
+                    data=[topic_counts, topic_proportions] + score_rows,
                     index=indices,
                     columns=self.sd_labels               
                 )
@@ -142,10 +129,25 @@ class Results:
                 normalize=True,
                 labels=range(len(self.sd_labels))  
             )
+
+            # Get weighted metrics as well. 
+            overall_scores = []
+            overall_scoring_metrics = [precision_score, recall_score, f1_score]
+            for metric in overall_scoring_metrics: 
+                score = metric(
+                    y_true=df["true_topic"],
+                    y_pred=df["pred_topic"],
+                    labels=self.sd_labels,
+                    average="weighted",
+                    zero_division=0,
+                )
+                overall_scores.append(score)
+
             metrics = pd.Series(
-                data=[accuracy, top3_accuracy, precisions, recalls, f1s],
+                data=[accuracy, top3_accuracy] + scores + overall_scores,
                 index=["Accuracy", "Top 3 Accuracy", "Macro-Precision", 
-                       "Macro-Recall", "Macro-F1-Score"]
+                       "Macro-Recall", "Macro-F1-Score", "Weighted-Precision",
+                       "Weighted-Recall", "Weighted-F1-Score"]
             )
         else: 
             raise ValueError("`by` argument can only be one of `['topic', 'overall']`")
@@ -185,7 +187,7 @@ class Results:
         self, 
         ndigits: int | None = None
     ) -> list[list[tuple[str, float]]]:
-        """ Finds the top3 predictions of the form [(topic_prediction, normalised_sim)...] 
+        """ Finds the top3 predictions of the form `[(topic_prediction, normalised_sim)...] `
         for each question, where the similarity is optionally rounded to 
         `ndigits` decimal points. 
         """
@@ -208,7 +210,7 @@ class Results:
         qn_idx: int,
     ) -> bool:
         """ Given a DataFrame containing predictions and true topics as well as the
-        cosine similarity matrix, checks if the prediction of the topic at qn_idx
+        cosine similarity matrix, checks if the prediction of the topic at `qn_idx`
         has within the top 3 highest cosine similarity scores.  
         """
         top3_list = self.top3_sims(qn_idx, self.cos)

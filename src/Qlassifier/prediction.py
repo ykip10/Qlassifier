@@ -1,7 +1,9 @@
 """ This model contains all logic relating to running the model on an input exam. """
 
-from typing import Any
-#from abc import ABC, abstractmethod
+from typing import Any, Sequence
+from abc import ABC, abstractmethod
+from pathlib import Path
+import re
 
 import torch
 import pandas as pd
@@ -12,12 +14,130 @@ from sentence_transformers import SentenceTransformer, util
 from InstructorEmbedding import INSTRUCTOR
 
 from src.preprocessor.tree_preprocessor import std_str
-from src.Qlassifier.utils import prepare_dataframes
+from src.preprocessor.loading import load_sd, prepare_sd_df, prepare_dataframes
 from src.Qlassifier.results import Results
 
-# class Predictor(ABC):             || TO IMPLEMENT (maybe, if it's worth it)
-#     @abstractmethod
-#     def run(self) -> Result
+class Predictor(ABC):
+    @abstractmethod
+    def classify(
+        self,
+        text: str,
+        return_cos: bool = False
+    ) -> str | Sequence[float]:
+        pass
+    
+    @abstractmethod
+    def run(self, exam_path: str) -> Results:
+        pass
+
+
+class InstructPredictor(Predictor):
+    def __init__(self, sd_path: str, subject: str):
+        self.model = INSTRUCTOR('hkunlp/instructor-large')
+        self.subject = subject
+        self.sd_df = prepare_sd_df(load_sd(sd_path), subject=subject)
+        self.sd_emb = self._get_sd_emb()
+
+    def classify(
+        self,
+        questions: Sequence[str],
+        return_cos: bool = False
+    ) -> str | Sequence[float]:
+        """ Classifies the input sequence of text into one of the study design topics each. 
+        If `return_cos == "True"` returns the cosine similarity matrix. Else,
+        just returns the study design topics with highest cosine similarities.  
+        """
+        subject = self.subject
+        if "math" in self.subject:
+            # Instructor doesn't really understand useless quantifiers like "Specialist" in 
+            # "Specialist Mathematics"
+            subject = "Mathematics" 
+        qn_instruct = f"Represent this {std_str(subject)} question for semantic search: "
+        qn_emb = self.model.encode(
+            [[qn_instruct, question] for question in questions],
+            convert_to_tensor=True,
+            normalize_embeddings=True
+        )
+        cos = util.cos_sim(qn_emb, self.sd_emb)
+        if return_cos: 
+            return cos
+        best_idxs = torch.argmax(cos, dim=1).tolist()
+        return self.sd_df.loc[best_idxs, "label"]
+
+    def run(self, exam_path: str, include_report: bool = False):
+        pred_df = prepare_dataframes(exam_path, subject=self.subject, load_report=include_report)[0]
+        qn_input = pred_df["text"]
+        cos = self.classify(qn_input, return_cos=True)
+        best_idxs = torch.argmax(cos, dim=1).tolist()
+
+        # Append our predictions to the questions DataFrame
+        pred_df["pred_topic"] = self.sd_df.loc[best_idxs, "label"].reset_index(drop=True)
+        pred_df["pred_topic_idx"] = best_idxs
+
+        # Add confidence of question texts' prediction
+        conf_col = torch.max(cos, axis=1).values / cos.sum(dim=1)
+        # Map to [0, 1]
+        conf_col = ((conf_col - min(conf_col)) / (max(conf_col) - min(conf_col))).tolist()
+        pred_df["confidence"] = conf_col
+        if include_report:
+            report_input = pred_df["comments"] if "comments" in pred_df.columns else [""]*len(qn_input)
+            cos_rp = self.classify(report_input, return_cos=True)
+            best_rp_idxs = torch.argmax(cos_rp, dim=1).tolist()
+            pred_df["report_pred"] = best_rp_idxs
+        
+        results = Results(pred_df, cos, self.sd_df["label"])
+        return results
+
+    def _get_sd_emb(self):
+        """ Gets study design embeddings. """
+        df = self.sd_df
+        input = df["label"].str.cat(df["text"], sep="")
+        instruct = f"Represent this {std_str(self.subject)} topic for semantic search: "
+        sd_emb = self.model.encode(
+            [[instruct, i] for i in input],
+            convert_to_tensor=True,
+            normalize_embeddings=True
+        )
+        return sd_emb
+
+
+class TfIdfPredictor(Predictor):
+    """ For tf-idf, we need some sort of common corpus to use in classifying arbitrary text.
+    We will use historic exam data to build this corpus.  
+    """
+    def __init__(
+        self,
+        sd_path: str,
+        subject: str, 
+        last_year: int | None = None,
+        **vectorizerargs
+    ):  
+        """ Initialises TfIdfPredictor. 
+
+        `sd_path`     : Path pointing to relevant study design. 
+        `subject`     : The subject name. 
+        `corpus_years`: The earliest year we should look for past exams in 
+                      the building of the tf-idf corpus.
+        """
+        self.vectorizer = TfidfVectorizer(**vectorizerargs)
+        self.subject = subject
+        self.sd_path = sd_path
+        self.last_year = last_year if last_year is not None else 0
+        # Need to extract a corpus.
+        self.corpus = self._load_corpus()
+    
+    def _load_corpus(self):
+        sd_df = prepare_sd_df(load_sd(self.sd_path), subject=self.subject)
+        sd_in = sd_df["label"]
+        exam_dir = Path(self.sd_path).parents[0] / "past_exams"
+        for exam in exam_dir.iterdir():
+            exam_name = str(exam)
+            match = re.search(r"\d{4}", exam_name) # extract year
+            year = int(match.group())
+            if year < self.last_year:
+                continue
+
+        # To finish implementing
 
 
 def run_combined(
@@ -163,7 +283,7 @@ def get_predictions(
     """
     instruct = isinstance(model, INSTRUCTOR) 
 
-    pred_df = qn_df.loc[:(len(labels)-1)].copy() if labels else qn_df.copy()
+    pred_df = qn_df.loc[:(len(labels)-1)].copy() if labels is not None else qn_df.copy()
     qn_input = pred_df["text"]
     # we don't always have a comments column
     report_input = pred_df["comments"] if "comments" in pred_df.columns else [""]*len(qn_input)
@@ -223,5 +343,5 @@ def get_predictions(
     conf_col = ((conf_col - min(conf_col)) / (max(conf_col) - min(conf_col))).tolist()
     pred_df["confidence"] = conf_col
 
-    results = Results(pred_df, cos_qn, sd_df["label"])
+    results = Results(pred_df, cos_qn, sd_df["label"], correct_topics=labels if labels is not None else None)
     return results

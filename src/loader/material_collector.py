@@ -33,10 +33,10 @@ def vcaa_extract_exam_materials(
     """ Extracts desired subject's past examinations publicly displayed on the VCAA website. 
     Uses beautiful soup.
 
-    subject: Exact subject name of the VCE/VET subject whose past examinations are to be scraped. 
-    years  : Examination years to extract.
-    reports: Whether or not to extract assessment reports. 
-    exams  : Whether or not to extract examination documents. 
+    `subject`: Exact subject name of the VCE/VET subject whose past examinations are to be scraped. 
+    `years`  : Examination years to extract.
+    `reports`: Whether or not to extract assessment reports. 
+    `exams`  : Whether or not to extract examination documents. 
     """
     is_math = "mathematic" in subject.lower() # Math subjects have two examinations
     headers = {"User-Agent": "Mozilla/5.0"}   # Need header to extract from VCAA 
@@ -88,7 +88,7 @@ def vcaa_extract_exam_materials(
 def extract_sds(subject: str) -> int:
     """ Extracts latest study designs from the VCAA website using Beautiful Soup.
 
-    subject: Subject whose study design is to be extracted.  
+    `subject`: Subject whose study design is to be extracted.  
     """
     subject_clean = subject.strip().lower().replace(" ", "_")
     file_dir = DATA_DIR / subject_clean / SD_DIR_NAME
@@ -146,15 +146,15 @@ def save_link(
     is_math: bool = 0,
     headers: str = {"User-Agent": "Mozilla/5.0"}
 ) -> int:
-    """ Saves an exam/report/study-design pointed to by full_url with hypertext text in predetermined data folder.
+    """ Saves an exam/report/study-design contained in `soup`.
     
-    soup    : Beautiful soup object for the page to be scraped 
-    pattern : Pattern of hypertext we want to scrape from
-    save_dir: Directory the file should be saved in. 
-    is_math : Is the subject being scraped a math one.
-    headers : Headers to use while scraping. 
+    `soup`    : Beautiful soup object for the page to be scraped 
+    `pattern` : Pattern of hypertext we want to scrape from
+    `save_dir`: Directory the file should be saved in. 
+    `is_math` : Is the subject being scraped a math one.
+    `headers` : Headers to use while scraping. 
 
-    Returns 0 if no links were found, 1 otherwise. 
+    Returns `0` if no links were found, `1` otherwise. 
     """
     links = soup.find_all("a", string=pattern, href=True)
     if not links:
@@ -223,7 +223,7 @@ def required_years(
     is_math: bool = False
 ) -> list[int]:
     """ Returns the subset of years which have not already been downloaded. 
-    Only cares about years. Might partially redownload exams if  """
+    Only cares about years. """
     needed_yrs = []
     for year in years: 
         file_base = f"{year}"

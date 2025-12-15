@@ -14,10 +14,10 @@ class TreePreprocessor:
     ):
         """ Initialises Tree Preprocessor object which is used for preprocessing
         trees parsed from exam documents. The types of documents supported
-        for preprocessing are past_exam and study_designs.
+        for preprocessing are `past_exam` and `study_designs`.
 
-        remove_latex: Whether or not to skip all LaTeX-like fragments.
-        is_math     : Does the document originate from a math subject 
+        `remove_latex`: Whether or not to skip all LaTeX-like fragments.
+        `is_math`     : Does the document originate from a math subject 
         """
         if doc_type not in ["study_design", "past_exam"]:
             raise ValueError("The only allowed doc types are 'study_design' and 'past_exam'.")
@@ -25,8 +25,8 @@ class TreePreprocessor:
         self.remove_latex = remove_latex        
 
     def preprocess(self, root: Tree,  **kwargs) -> Tree:
-        """ Preprocesses trees. Call this method as TextPreprocessor.preprocess(root, subject)
-        if initialised with doc_type == "study_design". Otherwise, just the tree root is required.
+        """ Preprocesses trees. Call this method as `TextPreprocessor.preprocess(root, subject)`
+        if initialised with `doc_type == "study_design"`. Otherwise, just the tree root is required.
         """
         if self.doc_type == "study_design":
             root = self._preprocess_sd(root, **kwargs)
@@ -80,7 +80,7 @@ class TreePreprocessor:
 
     def _preprocess_exam_text(self, text: str) -> str:
         """ Processes input text by:
-        1. removing LaTeX fragments (if initialised with remove_latex=True)
+        1. removing LaTeX fragments (if initialised with `remove_latex=True`)
         2. Removing non-content related text
         """
         if self.remove_latex:

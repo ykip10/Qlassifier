@@ -39,8 +39,8 @@ class PDFParser(Parser):
     ):
         """ Initialise PDF parsing object. 
 
-        path     : Path of pdf to be parsed.
-        cr_coords: Controls how much we crop in parsing. The cropbox we apply
+        `path`     : Path of pdf to be parsed.
+        `cr_coords`: Controls how much we crop in parsing. The cropbox we apply
                    will have PDF coordinates equal to the element-wise
                    multiplication of this parameter with (w, h, w, h), where
                    w and h are the width and height of the PDF respectively. 
@@ -88,9 +88,9 @@ class PDFParser(Parser):
         """ Extracts text from a PDF using PyMuPdf and sorts them into Sections and Questions.
 
         Goes through bolded text as candidates for splitting, then checks if the bolded text are 
-        valid question splits. Sorts extracted text into a Tree object and returns it. 
+        valid question splits. Sorts extracted text into a `Tree` object and returns it. 
 
-        The assumption is that new questions are labelled according to predefined QN_HIERARCHIES. 
+        The assumption is that new questions are labelled according to predefined `QN_HIERARCHIES`. 
         """
         # Find the last page, then crop the pdf. 
         final_page = self._find_final_page()
@@ -162,8 +162,8 @@ class PDFParser(Parser):
         return (flags & 16) != 0 or ("bold" in font)
 
     def _get_text_and_style(self, page_json: dict) -> tuple[str, bool, int]:
-        """ Given a parsed page.get_text("json") dict, return a list of 
-        (text, is_bold, y0) tuples, where y0 is the texts height on the page. 
+        """ Given a parsed `page.get_text("json")` dict, return a list of 
+        `(text, is_bold, y0)` tuples, where `y0` is the texts height on the page. 
         """
         out = []
         for block in page_json.get("blocks", []):
@@ -215,7 +215,7 @@ class WordParser(Parser):
         self.doc = self._load_doc()
 
     def parse(self) -> Tree: 
-        """ Return a list of (level, text) for headings found in the document 
+        """ Return a list of `(level, text)` for headings found in the document 
         found at path. It operates on the assumption that the document's 
         headings are stylised as headings (as opposed to something like 
         boldness/font size).
@@ -303,7 +303,7 @@ class WordParser(Parser):
 
 class AutoParser(Parser):
     """ Automatically determines whether to use a 
-    WordParser or PDF parser based on input path filetype.
+    `WordParser` or `PDFParser` based on input path filetype.
     Does not allow customisation of cropbox for PDF parsing."""
     def __init__(self, path: str):
         if Path(path).suffix not in [".pdf", ".docx"]:
@@ -312,5 +312,5 @@ class AutoParser(Parser):
         self.parser = WordParser(path) if Path(path).suffix == ".docx" else PDFParser(path)
     
     def parse(self):
-        """ Parses the document into a Tree object. """
+        """ Parses the document into a `Tree` object. """
         return self.parser.parse()

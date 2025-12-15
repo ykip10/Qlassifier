@@ -35,7 +35,7 @@ class ReportProcessor:
 	def __init__(self, path: str):
 		""" Creates an object for report processing.
 
-		path: Reports' path. Needs a .pdf or .docx file extension.
+		`path`: Reports' path. Needs a `.pdf` or `.docx` file extension.
 		"""
 		self.path = str(path)
 		self.parser = WordParser(path) if Path(path).suffix == ".docx" \
@@ -125,7 +125,8 @@ class ReportProcessor:
 		mcq: bool = True,
 	) -> int:
 		""" Parses a singular word table. Checks for correct answer column, if none are found
-		looks for cell highlighting to extract correct answers. """
+		looks for cell highlighting to extract correct answers.
+		"""
 		# Extract column names
 		cols = []
 		header = table.rows[0]
