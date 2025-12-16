@@ -14,7 +14,7 @@ def crop(
     save_path: str | None = None
 ) -> pymupdf.Document:
     """ Crop each page of the PDF by specifiying the coordinates of 
-    the crop box to be applied.  Returns the croppped PDF document.
+    the crop box to be applied. Returns the croppped PDF document.
 
     `doc`           : Document to be cropped. 
     `scaling_coords`: Where w and h are the width and height of the pdf respectively, 
@@ -52,8 +52,8 @@ def get_tables(
     mark distribution tables at the given pages. returns a dictionary
     mapping page indices to a list of the tables found on that page. 
 
-    `path`            : path of pdf
-    `pages`           : pages of pdf to get tables from. If None, gets all tables.
+    `path` : path of pdf
+    `pages`: pages of pdf to get tables from. If None, gets all tables.
     """
     pdf = PDF(
         path, 

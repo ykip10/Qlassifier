@@ -59,14 +59,23 @@ class Results:
         self._correct_topics = value
 
     def summary(
-        self, by: Literal["topic", "overall"]
+        self,
+        by: Literal["topic", "overall"],
+        subset: Sequence[int] | None = None
     ) -> pd.DataFrame | pd.Series | None: 
         """ Produces a summary of results stored in a DataFrame. 
         
-        If `by == "topic"`, calculates precision, recall, f1-scores, accuracy and  per topic. 
-        If `by == "overall"`, calculates 
+        `by`    : if `by == "topic"`, calculates precision, recall, f1-scores, 
+                  counts and proportions for each topic. 
+                  if `by == "overall"`, calculates weighted and macro classification metrics, 
+                  as well as accuracy and top 3 accuracy. 
+        `subset`: Sequence of indices for subsetting the question predictions. 
+                  Will only report results for this subset. 
         """
         df = self.pred_df
+        if subset is not None:
+            df = df.copy()
+            df = df.loc[subset]
         df["pred_topic"] = df["pred_topic_idx"].apply(lambda x: self.sd_labels[x])
 
         # Get metrics in the case where we have labelled data

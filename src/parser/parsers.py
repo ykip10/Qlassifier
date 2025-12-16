@@ -35,7 +35,7 @@ class PDFParser(Parser):
         self,
         path: str,
         cr_coords: tuple[int] = (0.07, 0.04, 0.93, 0.85),
-        subject_name: str = "",
+        subject_name: str | None = None,
     ):
         """ Initialise PDF parsing object. 
 
@@ -147,7 +147,7 @@ class PDFParser(Parser):
         root.build(nodes)
         return root
 
-    def crop(self, save_path: str = "") -> pymupdf.Document:
+    def crop(self, save_path: str | None = None) -> pymupdf.Document:
         return utils.crop(self.doc, self.cr_coords, save_path)
 
     def _span_is_bold(self, span: dict) -> bool:

@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 from src.Qlassifier.prediction import InstructPredictor, run_combined, run_tf_idf
-from src.loader import material_collector as mc
+from src.extractor import material_collector as mc
 from src.paths import DATA_DIR
 
 
@@ -51,9 +51,11 @@ def run_pipeline(
     
     # Running either a tf-idf or instructor exclusive model
     if argv[2] == "tf-idf":
-        results = run_tf_idf(path, subject, include_report=False)
+        pred = run_tf_idf(path, subject=subject)
+        results = pred.run(path)
     elif argv[2] == "instructor":
-        pred = InstructPredictor(sd_path=path.parents[1] / "study_design" / f"{subject}_sd.docx", subject=subject)
+        sd_path=path.parents[1] / "study_design" / f"{subject}_sd.docx"
+        pred = InstructPredictor(sd_path=sd_path, subject=subject)
         results = pred.run(path)
     else: 
         print("Third argument must be either empty or equal to 'tf-idf.'")

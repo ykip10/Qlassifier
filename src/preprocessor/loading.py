@@ -12,7 +12,11 @@ from src.parser.parsers import AutoParser
 from src.parser.report_processor import ReportProcessor
 from src.paths import DATA_DIR
 
-def load_data(exam_path: str, subject: str, load_report: bool = False) -> tuple[Tree, pd.DataFrame, Tree]:
+def load_data(
+    exam_path: str,
+    subject: str,
+    load_report: bool = False
+) -> tuple[Tree, pd.DataFrame, Tree]:
     """ Loads all relevant data to the input exam_path. This includes:
       - The parsed exam document as a Tree
       - The parsed report as a pandas df

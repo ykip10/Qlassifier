@@ -2,7 +2,7 @@
 from __future__ import annotations 
 from typing import TYPE_CHECKING, Literal, Union
 
-import loader.material_collector as mc
+import extractor.material_collector as mc
 from parser.report_processor import ReportProcessor
 from parser.parsers import AutoParser
 from paths import DATA_DIR
@@ -34,7 +34,7 @@ def process_material(
     
     if type == "exam":
         def extractor(subject, years):
-            return mc.vcaa_extrapct_exam_materials(subject, years, reports=False)
+            return mc.vcaa_extract_exam_materials(subject, years, reports=False)
         folder_name = mc.EXAM_DIR_NAME
 
     elif type == "report":

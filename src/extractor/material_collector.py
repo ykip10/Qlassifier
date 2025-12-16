@@ -27,13 +27,14 @@ RP_DIR_NAME = "past_reports"
 def vcaa_extract_exam_materials(
     subject: str,
     years: Sequence[int],
-    reports=True,
-    exams=True
+    reports: bool = True,
+    exams: bool = True
 ) -> int: 
     """ Extracts desired subject's past examinations publicly displayed on the VCAA website. 
     Uses beautiful soup.
 
-    `subject`: Exact subject name of the VCE/VET subject whose past examinations are to be scraped. 
+    `subject`: Exact subject name of the VCE/VET subject whose past
+               examinations are to be scraped. 
     `years`  : Examination years to extract.
     `reports`: Whether or not to extract assessment reports. 
     `exams`  : Whether or not to extract examination documents. 
@@ -143,7 +144,7 @@ def save_link(
     soup,
     pattern: str,
     save_dir: str,
-    is_math: bool = 0,
+    is_math: bool = False,
     headers: str = {"User-Agent": "Mozilla/5.0"}
 ) -> int:
     """ Saves an exam/report/study-design contained in `soup`.
@@ -188,7 +189,6 @@ def save_link(
 
 def find_exams_page(subject: str, headers: dict[str, str]) -> str:
     """ Finds the URL of the exams page for the given subjects."""
-    
     # Standardise subject input to "Subject Name".
     subject = subject.lower().replace("_", " ")
     subject = subject.replace(subject[0], subject[0].upper(), 1)   
@@ -230,17 +230,17 @@ def required_years(
         if is_math:
             file_base_1 = file_base + "_1"
             file_base_2 = file_base + "_2"
-            should_skip = any(path.stem == file_base_1 or path.stem == file_base_2 \
-                   for path in file_dir.iterdir() if path.is_file())
+            # Check if we have any matches for this year; skip only if we have both 
+            # exams for the year
+            should_skip = all(path.stem == file_base_1 or path.stem == file_base_2 \
+                              for path in file_dir.iterdir() if path.is_file())
         else: 
-            should_skip = any(path.stem == file_base \
-                          for path in file_dir.iterdir() if path.is_file())
-
+            # Only need to check one exam 
+            should_skip = all(path.stem == file_base \
+                              for path in file_dir.iterdir() if path.is_file())
         if should_skip:
             continue
-        
         needed_yrs.append(year)
-
     return needed_yrs
 
 
