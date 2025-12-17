@@ -35,6 +35,7 @@ If we want to parse a custom exam at exam_path (which may or may not be a VCAA e
 where ```model``` is:
   - ```tf-idf``` 
   - ```instructor```
+  
 More options will become available.
 
 # Notebooks
