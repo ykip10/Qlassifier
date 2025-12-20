@@ -11,7 +11,7 @@ instead of using a combined model.
 import sys 
 from pathlib import Path
 
-from src.Qlassifier.prediction import InstructPredictor, run_combined, run_tf_idf
+from src.Qlassifier.prediction import InstructPredictor, run_tf_idf
 from src.extractor import material_collector as mc
 from src.paths import DATA_DIR
 
@@ -24,7 +24,7 @@ def run_pipeline(
         print(__doc__)
         return 2
     
-    subject = argv[0]
+    subject = argv[0].lower()
     if ".pdf" in argv[1]:
         # Path supplied, can just run pipeline on this exam
         path = Path(argv[1])

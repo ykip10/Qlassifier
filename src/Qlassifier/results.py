@@ -29,9 +29,11 @@ class Results:
         Note that many evaluation methods ASSUME the columns of `pred_df`. 
         """
         self._pred_df = pred_df
-        # Convert to numpy for compatibility with pandas
+        # Convert to numpy for standardisation & compatibility with pandas
         if isinstance(cos, Tensor):
             self.cos = cos.cpu().numpy()
+        elif not isinstance(cos, np.ndarray):
+            self.cos = np.array(cos)
         else:
             self.cos = cos
         self.sd_labels = sd_labels if sd_labels is not None else []
@@ -70,12 +72,15 @@ class Results:
                   if `by == "overall"`, calculates weighted and macro classification metrics, 
                   as well as accuracy and top 3 accuracy. 
         `subset`: Sequence of indices for subsetting the question predictions. 
-                  Will only report results for this subset. 
+                  Will only report results on this subset. 
         """
-        df = self.pred_df
         if subset is not None:
-            df = df.copy()
-            df = df.loc[subset]
+            df = self.pred_df.copy().loc[subset]
+            cos = self.cos[subset]
+        else: 
+            df = self.pred_df
+            cos = self.cos
+
         df["pred_topic"] = df["pred_topic_idx"].apply(lambda x: self.sd_labels[x])
 
         # Get metrics in the case where we have labelled data
@@ -133,7 +138,7 @@ class Results:
             )
             top3_accuracy = top_k_accuracy_score(
                 y_true=df["true_topic_idx"],
-                y_score=self.cos,
+                y_score=cos,
                 k=3,
                 normalize=True,
                 labels=range(len(self.sd_labels))  

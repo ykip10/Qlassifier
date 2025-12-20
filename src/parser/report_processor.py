@@ -59,15 +59,13 @@ class ReportProcessor:
 		
 		# Need to move to short answer section, if such a well-labelled
 		# header exists in the doc (true for newer vcaa docs).
-		if root.label_search(r"Section") is not None:
-			mcq_root = root.label_search(
-				pattern=r"(?i)multiple[- ]choice"
-			)
-			if mcq_root is not None:
-				# mcq section is labelled, search for NON-mcq section
+		if root.label_search(r"Section"):
+			try:
 				root = root.label_search(
 					pattern=r"^(?!.*(?i:Multiple[- ]Choice)).*Section [A-Z]\b"
-				)
+				)[0]
+			except IndexError:
+				pass
 		
 		qn_regex = r"(Q|q)uestion \d+.?"
 		root.filter_tree(pattern=qn_regex)
@@ -152,7 +150,7 @@ class ReportProcessor:
 			# Short answer, need to extract comments 
 			# from outside the table.
 			cols_lower.append("comments")
-			comment = self.root.label_search(next(self.sa_qns)).text
+			comment = self.root.label_search(next(self.sa_qns))[0].text
 			table_data["comments"] = comment
 		
 		for row in table.rows[1:]:
@@ -194,7 +192,7 @@ class ReportProcessor:
 		# Still need to get the comments outside of tables
 		root = self.root
 		comment_dfs = [
-			pd.DataFrame(data={"comments": [root.label_search(qn).text]})
+			pd.DataFrame(data={"comments": [root.label_search(qn)[0].text]})
 			for qn in self.sa_qns_lst
 		]
 

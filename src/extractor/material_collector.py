@@ -2,7 +2,7 @@
 Script to collect VCAA past exams and study design for a given VCE subject.
 Saves scraped data to ../data/subject_name.
 
-Usage: python3 -m src.loading.material_collector subject_name year1,year2,year3...
+Usage: python3 -m src.extractor.material_collector subject_name year1,year2,year3...
 """
 
 import sys
@@ -60,7 +60,6 @@ def vcaa_extract_exam_materials(
     # Now we find any matching examinations/reports. 
     html = requests.get(full_url, headers=headers).text
     soup = BeautifulSoup(html, "html.parser")
-
     if exams and exam_years:
         # We extract hyperlinks which match VCAA hypertext naming convention
         exam_year_pattern = "|".join(map(str, exam_years))
@@ -177,11 +176,10 @@ def save_link(
         file_name = f"{year}_{num}{ext}" if is_math else f"{year}{ext}"
         save_dir.mkdir(parents=True, exist_ok=True)
         save_path = save_dir / file_name
-
         if save_path.exists(): # already saved
             continue
         # download and save 
-        resp = requests.get(full_url, headers=headers)
+        resp = requests.get(full_url, headers=headers, timeout=10)
         with open(save_path, "wb") as f:
             f.write(resp.content)
     return 1
@@ -223,7 +221,11 @@ def required_years(
     is_math: bool = False
 ) -> list[int]:
     """ Returns the subset of years which have not already been downloaded. 
-    Only cares about years. """
+    Only cares about years. 
+    """
+    if not len(list(file_dir.iterdir())):
+        # we don't have any files in this directory
+        return years
     needed_yrs = []
     for year in years: 
         file_base = f"{year}"

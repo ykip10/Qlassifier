@@ -2,6 +2,7 @@
     - loading data for model to directly absorb
     - loading study design mnaterial
 """
+import re
 from pathlib import Path
 
 import pandas as pd 
@@ -17,10 +18,10 @@ def load_data(
     subject: str,
     load_report: bool = False
 ) -> tuple[Tree, pd.DataFrame, Tree]:
-    """ Loads all relevant data to the input exam_path. This includes:
-      - The parsed exam document as a Tree
-      - The parsed report as a pandas df
-      - The parsed study design as a tree
+    """ Loads all relevant data to the input `exam_path`. This includes:
+      - The parsed exam document as a `Tree`
+      - The parsed report as a pandas `DataFrame`
+      - The parsed study design as a `Tree`
     """
     exam_path = Path(exam_path)
     if not exam_path.exists():
@@ -56,29 +57,62 @@ def prepare_dataframes(
     exam_path: str,
     subject: str,
     load_report: bool = False,
+    sd_df: pd.DataFrame | None = None
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """ Parses exams at the exam_path as well as the associated study designs and reports. 
-    Performs some preprocessing then returns the exams as dataframes. 
+    """ Parses exams at the `exam_path` as well as the associated study designs and reports. 
+    Performs some preprocessing then returns the exams as dataframes.
     """
     # Parsing
     ex_root, report_df, sd_root = load_data(exam_path, subject, load_report)
-    sd_df = prepare_sd_df(sd_root, subject) # prepare sd_df 
+    sd_df = sd_df if sd_df is not None else prepare_sd_df(sd_root, subject)
     
     # Prepare exam df manually 
     has_mcq = ex_root.has_mcq
     ex_root = TreePreprocessor("past_exam", remove_latex=True).preprocess(ex_root)
     ex_level = ex_root.find_node_level(r"Question")
-    ex_root.collapse(ex_level)
+    ex_root.collapse(ex_level, label_sep="")
     # Convert to df
     ex_df = ex_root.to_df(include_root=False)
     # Remove labels which aren't Questions (section descriptions, formula sheets etc.)
-    ex_df = ex_df.loc[ex_df["label"].str.contains("Question", na=False), :].reset_index(drop=True)
-    ex_df.drop_duplicates("label") # Questions are unique. 
+    ex_df = ex_df.loc[
+        ex_df["label"].str.contains("Question", na=False, case=False) |
+        ex_df["label"].str.contains("Section", na=False, case=False)
+    ].reset_index(drop=True)
 
+    # Add section column by forward filling
+    is_section = ex_df["label"].str.match(r"^Section\s+.?", na=False, case=False)
+    is_question = ex_df["label"].str.match(r"^Question", na=False, case=False)
+    ex_df["section"] = ex_df["label"].where(is_section).ffill()
+    ex_df = ex_df[is_question].reset_index(drop=True)
+
+    ex_df.drop_duplicates(subset=["label", "section"]) # Question section pairs are unique.
+    
+    # Finally, add question number column and sort by question number within sections
+    def question_sort_key(q: str) -> tuple[int, str]:
+        """ Sorting key for a question label. Sort by question number,
+        then question part. Example; question 3 should come after question 2b 
+        which comes after question 2a. 
+        """
+        m = re.match(r"(?i)Question\s+(\d+)([A-Z]*)", q)
+        if not m:
+            return (float("inf"), "")
+        num = int(m.group(1))
+        suffix = m.group(2) or ""
+        return (num, suffix)
+    
+    # sorting
+    ex_df["q_key"] = ex_df["label"].map(question_sort_key)
+    ex_df = ex_df.sort_values(
+        by=["section", "q_key"],
+        kind="stable"
+    ).reset_index(drop=True)
+
+    ex_df["qn_num"] = ex_df["q_key"].apply(lambda x: x[0]) # qn number column
+    ex_df = ex_df.drop(columns=["q_key"]) # dont need key anymore
+    
     if report_df is not None:
         # Need to merge report data into the questions data
         rp_dfs = [df for df in report_df]
-
         # add marks column
         new_dfs = []
         for df in rp_dfs: 
@@ -87,14 +121,15 @@ def prepare_dataframes(
             else: 
                 df["total_marks"] = 1
             new_dfs.append(df)
-
         rp_df = pd.concat(new_dfs).reset_index(drop=True)
         if has_mcq:
             rp_df.drop_duplicates("question")
+
         rp_df = rp_df[["comments", "total_marks"]] if "comments" in rp_df.columns else rp_df["total_marks"]
         qn_df = pd.concat([ex_df, rp_df], axis=1)
     else:
         qn_df = ex_df
+    
     return qn_df, sd_df
 
 
@@ -113,30 +148,21 @@ def prepare_sd_df(
     subject: str
 ) -> pd.DataFrame:
     """ Transforms a study design tree into a pandas DataFrame with two columns:
-    label, and text. 
+    `label`, and `text`. 
     """ 
     is_math = "math" in subject
-    root = TreePreprocessor("study_design", remove_latex=True).preprocess(root, subject=subject)
-    # +1 for math s/d's since we want to collapse exactly one indentation after 
-    # Area of study headers 
-    level = root.find_node_level(r"Outcome \d") if not is_math \
-                else (root.find_node_level(r"Area of Study \d") + 1)
-    if is_math:
-        # For math study designs, need to collapse to get 
-        # full label context
-        root.collapse(level, sep=": ")
-    else:
-        # For non-math study designs, dot points are under outcomes. 
-        root.filter_tree(r"Outcome \d")
+    root = TreePreprocessor("study_design", remove_latex=is_math).preprocess(root, subject=subject)
 
-    # convert Tree to pandas dataframe
-    df = root.to_df(include_root=False, level=level if is_math else 0)
+    df = root.to_df(
+        include_root=False,
+        level=(root.find_node_level(r"Area of Study \d") + 1) if is_math else 0
+    )
     if not is_math: 
         # Again, this is because math s/d's are different since they're all merged into one
         # Remove all rows not directly related to the relevant subtopics
         df = df.loc[
             ~(df["label"].str.contains(
-                r"(Unit \d)|(Area of Study \d)|(Key Knowledge)|(Outcome \d)",
+                r"(Unit \d)|(Area of Study \d)|(^Key Knowledge)|(^Outcome \d$)",
                 case=False,
                 na=False
             ) | df["text"].str.contains("In this area of study"))

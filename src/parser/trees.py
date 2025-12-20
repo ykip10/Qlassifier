@@ -25,9 +25,9 @@ class Tree:
         self, 
         label: str, 
         level: int,
-        page_idx: int = None,
-        subject_name: str = "",
-        text: str = "",
+        page_idx: int | None = None,
+        subject_name: str | None = None,
+        text: str | None = None,
         marks: int = 0,
     ):
         """ Initialises Tree object. 
@@ -42,14 +42,17 @@ class Tree:
         self.label = label
         self.level = level
         self.page_idx = page_idx
-        self.subject_name = subject_name
-        self.text = text       
+        self.subject_name = subject_name if subject_name is not None else ""
+        self.text = text if text is not None else ""
         self.marks = marks     
         
         self.parent = None
         self.children = []
         self.has_mcq = self._has_mcq()
-        
+    
+    def _has_mcq(self):
+        return bool(self.label_search(pattern=r"(?i)multiple[- ]choice"))
+
     def build(self, nodes: list[Self]):
         """ Builds the tree from a list nodes. Nodes must be structured such that 
         each child of a node appears directly after it and before the next sibling node.
@@ -65,19 +68,18 @@ class Tree:
             stack[-1].children.append(node)
             stack.append(node)
 
-    def label_search(self, pattern: str) -> Optional[Self]:
+    def label_search(self, pattern: str) -> list:
         """ Searches tree for a child node with a regex match between the pattern and the node 
         label using depth-first search (dfs). Returns None if no match was found. 
         """
-        if re.search(pattern, self.label):
-            return self
-
-        for node in self.children:
-            found = node.label_search(pattern)
-            if found is not None: 
-                return found
-
-        return None
+        matches = []
+        stack = [self]
+        while stack:
+            node = stack.pop()
+            if re.match(pattern, node.label):
+                matches.append(node)
+            stack.extend(node.children)
+        return matches
 
     def print_tree(self, hide_text: bool = False):
         """ We implement a dfs to print the tree in a manner which makes hierarchy clear. """
@@ -93,7 +95,7 @@ class Tree:
         """ Goes through the tree and only keeps the branches which contain a node with a
         label that match the input regex pattern. Edits the tree in-place. 
         """
-        keep = bool(re.search(pattern, self.label))
+        keep = bool(re.match(pattern, self.label))
         if keep:
             return True
         
@@ -114,7 +116,7 @@ class Tree:
         Useful when an entire level shares a regex naming pattern 
         (such as Question 1, 2...)
         """
-        return self.label_search(label_regex).level
+        return self.label_search(label_regex)[0].level
 
     def get_nodes_at_level(self, level: int) -> list[Self]:
         """ Returns a list of nodes belonging to the specified level."""
@@ -139,7 +141,12 @@ class Tree:
         for node in self.children:
             node.preprocess_text(preprocessor)
 
-    def collapse(self, level: int, sep: str = "", concat_label: bool = False):
+    def collapse(
+        self,
+        level: int,
+        text_sep: str | None = None,
+        label_sep: str | None = None,
+    ):
         """ Recursively collapses tree at specified level, concatenating
         parent text and labels with child text and labels.
         
@@ -153,11 +160,15 @@ class Tree:
             Level 3: Empty
         
         Args:
-        `level`       : level to collapse at 
-        `sep`         : Character to use as a separator between labels when concatenating
-        `concat_label`: Boolean flag indicating whether or not we should concatenate labels
-                        (as opposed to just using the child's label)
+            level         : level to collapse at 
+            text_sep      : Character to use as a separator between text when concatenating. If `None`, 
+                            defaults to empty string
+            label_sep     : Character to use as a separator between labels when concatenating. If `None`,
+                            doesn't concatenate labels, just uses child label
         """
+        child_label = label_sep is None # Whether or not we should use child labels
+        label_sep = label_sep if label_sep is not None else ""
+        text_sep = text_sep if text_sep is not None else ""
 
         # Approach: iterate over all nodes at the collapsing level 
         # and replace their parent's children with the collpased nodes
@@ -169,8 +180,9 @@ class Tree:
             parent = node.parent
 
             collapsed = [] # collapsed nodes
-            self._dfs_collect(node, "", "", collapsed, level=node.level,
-                              sep=sep, concat_label=concat_label)
+            self._dfs_collect(
+                node, "", "", collapsed, node.level, text_sep, label_sep, child_label
+            )
             
             # replace node with collapsed
             parent.children.remove(node)
@@ -183,17 +195,20 @@ class Tree:
         text_prefix: str,
         out: list[Self],
         level: int,
-        sep: str,
-        concat_label: bool
+        text_sep: str,
+        label_sep: str,
+        child_label: bool
     ):
         """ Collapses all nodes from input node, edits the out list to contain
         the flattened collapsed, nodes. 
         """
-        new_label = label_prefix + sep + node.label \
-                    if label_prefix and not concat_label else node.label 
-        new_text = text_prefix + sep + node.text
+        new_label = label_prefix + label_sep + node.label if not child_label else node.label
+        new_text = text_prefix + text_sep + node.text 
 
         if not node.children:
+            # Labels and text have extra separators at the end, just shave that off
+            new_label = new_label[len(label_sep):]
+            new_text = new_text[len(text_sep):]
             new = Tree(
                 label=new_label,
                 level=level,
@@ -201,14 +216,15 @@ class Tree:
                 page_idx=node.page_idx,
                 marks=node.marks
             )
-            new.marks
             out.append(new)
             return
 
         for child in node.children:
-            child._dfs_collect(child, new_label, new_text, out, level, sep, concat_label)
+            child._dfs_collect(
+                child, new_label, new_text, out, level, text_sep, label_sep, child_label
+            )
     
-    def to_df(self, include_root: bool = True, level=0):
+    def to_df(self, include_root: bool = True, level = 0):
         """ Converts the tree to a pandas DataFrame with columns:
         `label`: node label
         `text` : associated text for the node
@@ -239,6 +255,66 @@ class Tree:
         if not include_root:
             df = df.loc[df["label"] != self.label, :]
         return df
+    
+    def edit_node(self, new_node: Self) -> Self:
+        """Replace this node with new_node in the tree.
+        Requires the input node to be of the same level as the 
+        current node. 
+        """
+        if new_node.level != self.level: 
+            raise ValueError("New nodes level must be the same as current node.")
 
-    def _has_mcq(self):
-        return bool(self.label_search(r"(i:)Section [a-zA-Z]"))
+        # detach new_node from its current parent (if any)
+        if new_node.parent is not None:
+            try:
+                new_node.parent.children.remove(new_node)
+            except ValueError:
+                pass
+            new_node.parent = None
+
+        parent = self.parent
+        if parent is None:
+            # replacing the root, mutate self to adopt new_node's attributes and children
+            self.label = new_node.label
+            self.page_idx = new_node.page_idx
+            self.subject_name = new_node.subject_name
+            self.text = new_node.text
+            self.marks = new_node.marks
+
+            # Use only new_node's children
+            self.children = []
+            for ch in new_node.children:
+                ch.parent = self
+                self.children.append(ch)
+            self.has_mcq = self._has_mcq()
+            return self
+
+        # replace self in parent's children with new_node
+        try:
+            idx = parent.children.index(self)
+        except ValueError:
+            # fallback: append if self is not found
+            parent.children.append(new_node)
+        else:
+            parent.children[idx] = new_node
+
+        new_node.parent = parent
+        # update has_mcq on the subtree root
+        new_node.has_mcq = new_node._has_mcq()
+        return new_node
+
+    def get_leaves(self) -> list[Self]:
+        """Return a list of leaf nodes in this subtree.
+        Traversal is depth-first and includes `self` if it is a leaf.
+        """
+        leaves = []
+        def _dfs(node: Self):
+            if not node.children:
+                leaves.append(node)
+                return
+            for child in node.children:
+                _dfs(child)
+
+        _dfs(self)
+        return leaves
+

@@ -1,6 +1,7 @@
 """ Class for preprocessing the text present in trees. """
 import re
 from typing import Literal
+from copy import deepcopy
 
 from src.parser.trees import Tree
 
@@ -37,19 +38,53 @@ class TreePreprocessor:
     def _preprocess_sd(self, root: Tree, subject: str) -> Tree:
         is_math = "math" in subject.lower()
         if is_math:
-            root = root.label_search(rf"Units 3 and 4: {std_str(subject)}")
+            root = root.label_search(rf"Units 3 and 4: {std_str(subject)}")[0]
         else:
             root.filter_tree(r"Unit(s)? (3|4)")
-        
         aos_re = r"Area of Study \d?$"
         # only care about content-describing sections
         root.filter_tree(aos_re)
         if not is_math:
+            outcome_re = r"Outcome \d"
+            level = root.find_node_level(outcome_re)
+            outcome_nodes = root.label_search(outcome_re)
+            # If outcomes aren't segmented into labelled topics and instead
+            # into a key knowledge list, we have to find an appropriate label 
+            # in other ways.  
+            example_node = outcome_nodes[0] # Assume consistent document structure 
+            if any([not re.match(r"Key ((K|knowledge)|(S|skills))", n.label)
+                    for n in example_node.get_leaves()]):
+                # leaf nodes already descriptive, don't need to do anything except collpase
+                root.collapse(level=level, text_sep=". ")
+                return root
+
+            # No topic labels, check if parent label contains 
+            # description (and not area of study text)
+            if not re.match(aos_re, example_node.parent.label):
+                root.filter_tree(outcome_re)
+                root.collapse(level=level-1, label_sep=": ")
+                return root
+            
+            # fallback: previous nodes with same parent give context
+            for node in outcome_nodes:
+                siblings = node.parent.children
+                non_outcome_labels = [not re.match(outcome_re, sibling.label)
+                                      for sibling in siblings]
+                
+                if any(non_outcome_labels):
+                    context_label = siblings[non_outcome_labels.index(True)].label
+                    node.label += ": " + context_label
+                else:
+                    # If all else fails, use area of study as label.
+                    node.label = node.parent.label + ": " + node.label
+            root.filter_tree(outcome_re)
+            root.collapse(level=level, label_sep=": ")
             return root
         
         # Math study designs have a rigid structure, but inconsistent formatting
-        # In particular, the first sub-heading under "Area of Study \d" give a short description
+        # In particular, the first sub-heading under "Area of Study \d" gives a short description
         # of the Area of Study, then sub-sub-headings only, until the next area of study. 
+        # We want to change this so the children of "Area of Study \d" are the sub-topics themselves. 
         aos_level = root.find_node_level(aos_re)
         aos_nodes = root.get_nodes_at_level(aos_level)
 
@@ -71,7 +106,9 @@ class TreePreprocessor:
             
             desc_node.children.extend(new_desc_children)
             aos_node.children = [desc_node]
-            
+
+        # Collapse at topic description
+        root.collapse(aos_level+1, text_sep=": ", label_sep=": ")
         return root 
     
     def _preprocess_exam(self, root: Tree) -> Tree:
@@ -88,15 +125,17 @@ class TreePreprocessor:
         
         text = re.sub(r"(?i)20\d\d .+ exam(ination)?", "", text) # remove headers
         text = re.sub(r"(\(?\d+\))? ?marks?", "", text) # remove leftover marks indicators
-        text = re.sub(r"\(\d+\)*", "", text) # page numbers and stuff scattered about, remove htem
+        text = re.sub(r"\(\d+\)*", "", text) # page numbers and stuff scattered about, remove them
         text = text.replace("  ", " ") # replace double spaces with just one space. 
         return text
 
     def _remove_latex(self, text: str) -> str:
         text = remove_pua_chars(text)
-        # Simply remove every piece of text which 
+        # Remove every piece of text which is one character long in length. This removes a 
+        # very large majority of LaTeX fragmentation with small false positive rate, given 
+        # we include the letter "a" (not perfect, but fine).
         tokens = text.split(" ")
-        keep = [t for t in tokens if t in self.allowed_latex or len(t) > 1]
+        keep = [t for t in tokens if t in self.allowed_latex or len(t) > 1 or t=="a"]
         return " ".join(keep)
 
 

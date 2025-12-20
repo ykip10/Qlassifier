@@ -4,6 +4,9 @@
 # Add main src 
 !src/
 !src/**
+!scope.py
+!tests/
+!tests/**
 
 # Add notebooks
 !notebooks/
@@ -17,3 +20,5 @@
 
 # Ignore python byte-code
 __pycache__/
+# Ignore pickle dumps 
+saved_results/ 

@@ -1,4 +1,4 @@
-""" This model contains all logic relating to running the model on an input exam. """
+""" This module contains all logic relating to running the model on an input exam. """
 
 from typing import Sequence
 from abc import ABC, abstractmethod
@@ -72,7 +72,8 @@ class Predictor(ABC):
             raise TypeError("exam must be a str, Path or pandas DataFrame.")
 
         qn_input = pred_df["text"]
-        cos = self.classify(qn_input, return_cos=True)
+        cos = self.classify(qn_input, return_cos=True) # cosine sim matrix
+        # Find max of cosine sim matrix for each question (this is our prediction)
         best_idxs = torch.argmax(cos, dim=1).tolist()
 
         # Append our predictions to the questions DataFrame
@@ -122,7 +123,7 @@ class InstructPredictor(Predictor):
     def _get_sd_emb(self):
         """ Gets study design embeddings. """
         df = self.sd_df
-        input = df["label"].str.cat(df["text"], sep="")
+        input = df["label"].str.cat(df["text"], sep="; ") # Turns input into Topic; topic_description... 
         instruct = f"Represent this {std_str(self.subject)} topic for semantic search: "
         sd_emb = self.model.encode(
             [[instruct, i] for i in input],
