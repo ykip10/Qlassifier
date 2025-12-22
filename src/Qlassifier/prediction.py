@@ -13,14 +13,14 @@ from sentence_transformers import SentenceTransformer, util
 from InstructorEmbedding import INSTRUCTOR
 
 from src.preprocessor.tree_preprocessor import std_str
-from src.preprocessor.loading import load_sd, prepare_sd_df, prepare_dataframes
+from src.preprocessor.loading import prepare_sd_df, prepare_exam_df
 from src.Qlassifier.results import Results
 
 
-class Predictor(ABC):
+class TransformerPredictor(ABC):
     def __init__(self, sd_path: str, subject: str):
         self.subject = subject
-        self.sd_df = prepare_sd_df(load_sd(sd_path), subject=subject)
+        self.sd_df = prepare_sd_df(sd_path, subject=subject)
         self.sd_emb = self._get_sd_emb()
 
     @abstractmethod
@@ -54,7 +54,7 @@ class Predictor(ABC):
         exam: str | Path | pd.DataFrame,
         include_report: bool = False
     ) -> Results:
-        """ Runs the predictor on an exam, and returns the result 
+        """ Runs the predictor on an exam, and returns the result      
         as a `Results` object. 
 
         `exam`          : Either a string/path object pointing to an exam, or a pandas dataframe
@@ -63,7 +63,7 @@ class Predictor(ABC):
                           Can only be `True` if the exam points to a path. 
         """
         if isinstance(exam, str) or isinstance(exam, Path):
-            pred_df = prepare_dataframes(exam, subject=self.subject, load_report=include_report)[0]
+            pred_df = prepare_exam_df(exam, subject=self.subject, load_report=include_report)
         elif isinstance(exam, pd.DataFrame):
             if include_report:
                 raise ValueError("Cannot include report if exam is a pandas DataFrame.")
@@ -91,13 +91,18 @@ class Predictor(ABC):
             best_rp_idxs = torch.argmax(cos_rp, dim=1).tolist()
             pred_df["report_pred"] = best_rp_idxs
         
-        results = Results(pred_df, cos, self.sd_df["label"])
+        results = Results(pred_df, cos, self.subject, self.sd_df["label"])
         return results
     
 
-class InstructPredictor(Predictor):
-    def __init__(self, sd_path: str, subject: str):
-        self.model = INSTRUCTOR('hkunlp/instructor-large')
+class InstructPredictor(TransformerPredictor):
+    def __init__(
+        self,
+        sd_path: str,
+        subject: str,
+        model: INSTRUCTOR | None = None
+    ):
+        self.model = model if model is not None else INSTRUCTOR('hkunlp/instructor-large')
         super().__init__(sd_path, subject)
         
     def embed(
@@ -133,7 +138,7 @@ class InstructPredictor(Predictor):
         return sd_emb
 
 
-class SentenceTransPredictor(Predictor): 
+class SentenceTransPredictor(TransformerPredictor): 
     def __init__(
         self,
         sd_path: str,
@@ -154,60 +159,76 @@ class SentenceTransPredictor(Predictor):
         return self.embed(sd_input)
 
 
-def run_tf_idf(
-    exam_path: str,
-    subject: str, 
-    labels: list[str] | None = None,
-    include_report: bool = False,
-    **vectorizerargs
-) -> Results:
-    """ Runs TF-IDF on an exam and the subject's study design.
-    Returns:
-        - dataframe containing predictions (optionally with correct labels, if provided)
-        - study design topic labels
-        - cosine similarity matrix
-    """ 
-    qn_df, sd_df = prepare_dataframes(exam_path, subject, load_report=include_report)
+class TfIdfPredictor:
+    def __init__(
+        self,
+        sd_path: str,
+        subject: str,
+        vectorizer: TfidfVectorizer | None = None
+    ):
+        self.vectorizer = vectorizer if vectorizer is not None else TfidfVectorizer()
+        self.sd_df = prepare_sd_df(sd_path, subject)
+        self.subject = subject
 
-    ans_desc = []
-    if not include_report:
-        if "comments" in qn_df.columns:          
-            qn_df.drop(columns=["comments"])
-    else: 
-        ans_desc = qn_df["comments"]
-    qns_desc = qn_df["text"]
-    topic_desc = list(sd_df["text"])
-    
-    vectorizer = TfidfVectorizer(**vectorizerargs)
-    # Merge question text and report text to treat them as the same "document" for TF-IDF purposes. 
-    qns_ans_merged = [(qn_desc + " " + ans_desc).strip() for \
-                     qn_desc, ans_desc in zip(qns_desc, ans_desc)] if include_report else \
-                     [qn_desc.strip() for qn_desc in qns_desc]
-    # need to apply TF-IDF on the entire corpus, so we merge with the topics
-    merged = topic_desc + qns_ans_merged
+    def run(
+        self, 
+        exam: str | Path | pd.DataFrame,
+        include_report: bool = False,
+    ) -> Results:
+        """ Runs TF-IDF on an exam and the subject's study design.
+        Returns:
+            - dataframe containing predictions (optionally with correct labels, if provided)
+            - study design topic labels
+            - cosine similarity matrix
+        """ 
+        if isinstance(exam, str) or isinstance(exam, Path):
+            qn_df = prepare_exam_df(exam, subject=self.subject, load_report=include_report)
+        elif isinstance(exam, pd.DataFrame):
+            if include_report:
+                raise ValueError("Cannot include report if exam is a pandas DataFrame.")
+            qn_df = exam.copy()
+        else: 
+            raise TypeError("exam must be a str, Path or pandas DataFrame.")
 
-    # Run TF-IDF and store results
-    tfidf = vectorizer.fit_transform(merged)
-    topic_vecs = tfidf[:len(topic_desc)]
-    ex_vecs = tfidf[len(topic_desc):]
+        ans_desc = []
+        if not include_report:
+            if "comments" in qn_df.columns:          
+                qn_df.drop(columns=["comments"])
+        else: 
+            ans_desc = qn_df["comments"]
+        qns_desc = qn_df["text"]
+        topic_desc = list(self.sd_df["text"])
 
-    # Commpute cosine similarity then classify based on highest similarity
-    cos = cosine_similarity(ex_vecs, topic_vecs)
-    best_idxs = np.argmax(cos, axis=1)
+        vectorizer = self.vectorizer
+        # Merge question text and report text to treat them as the same "document" for TF-IDF purposes. 
+        qns_ans_merged = [(qn_desc + " " + ans_desc).strip() for \
+                         qn_desc, ans_desc in zip(qns_desc, ans_desc)] if include_report else \
+                         [qn_desc.strip() for qn_desc in qns_desc]
+        # need to apply TF-IDF on the entire corpus, so we merge with the topics
+        merged = topic_desc + qns_ans_merged
 
-    # add confidence column as similarity / sum(similarity)
-    conf_col = np.max(cos, axis=1)/ (np.sum(cos, axis=1)+1e-12)
+        # Run TF-IDF and store results
+        tfidf = vectorizer.fit_transform(merged)
+        topic_vecs = tfidf[:len(topic_desc)]
+        ex_vecs = tfidf[len(topic_desc):]
 
-    # Map to [0, 1]
-    conf_col = ((conf_col - min(conf_col)) / (max(conf_col) - min(conf_col))).tolist()
+        # Commpute cosine similarity then classify based on highest similarity
+        cos = cosine_similarity(ex_vecs, topic_vecs)
+        best_idxs = np.argmax(cos, axis=1)
 
-    pred_df = qn_df.copy()
-    pred_df["pred_topic"] = sd_df.loc[best_idxs, "label"].reset_index(drop=True)
-    pred_df["pred_topic_idx"] = best_idxs
-    
-    pred_df["confidence"] = conf_col
+        # add confidence column as similarity / sum(similarity)
+        conf_col = np.max(cos, axis=1)/ (np.sum(cos, axis=1)+1e-12)
 
-    results = Results(pred_df, cos, list(sd_df["label"]))
-    if labels is not None: 
-        results.correct_topics = labels
-    return results
+        # Map to [0, 1]
+        conf_col = ((conf_col - min(conf_col)) / (max(conf_col) - min(conf_col))).tolist()
+
+        pred_df = qn_df.copy()
+        pred_df["pred_topic"] = self.sd_df.loc[best_idxs, "label"].reset_index(drop=True)
+        pred_df["pred_topic_idx"] = best_idxs
+
+        pred_df["confidence"] = conf_col
+
+        results = Results(pred_df, cos, self.subject, list(self.sd_df["label"]))
+        return results
+
+

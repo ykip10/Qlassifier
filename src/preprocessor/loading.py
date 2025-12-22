@@ -11,17 +11,18 @@ from src.preprocessor.tree_preprocessor import TreePreprocessor
 from src.parser.trees import Tree
 from src.parser.parsers import AutoParser
 from src.parser.report_processor import ReportProcessor
+from src.extractor.material_collector import has_two_exams
 from src.paths import DATA_DIR
 
-def load_data(
+#=========== LOADING EXAMS==========#
+def load_exam(
     exam_path: str,
     subject: str,
     load_report: bool = False
-) -> tuple[Tree, pd.DataFrame, Tree]:
+) -> tuple[Tree, pd.DataFrame]:
     """ Loads all relevant data to the input `exam_path`. This includes:
       - The parsed exam document as a `Tree`
-      - The parsed report as a pandas `DataFrame`
-      - The parsed study design as a `Tree`
+      - The parsed report as a pandas `DataFrame` (if `load_report == True`)
     """
     exam_path = Path(exam_path)
     if not exam_path.exists():
@@ -29,11 +30,6 @@ def load_data(
     
     exam = exam_path.stem
     subject_path = DATA_DIR / subject
-
-    # Find study design
-    sd_path = subject_path / "study_design" / f"{subject}_sd.docx"
-    sd_root = load_sd(sd_path)
-
     # load in data 
     ex_root = AutoParser(exam_path).parse()
     reports_df = None
@@ -50,21 +46,19 @@ def load_data(
         report_path = report_dir / f"{exam}{ext}"
         reports_df = ReportProcessor(report_path).parse_tables()
 
-    return ex_root, reports_df, sd_root
+    return ex_root, reports_df
 
 
-def prepare_dataframes(
+def prepare_exam_df(
     exam_path: str,
     subject: str,
     load_report: bool = False,
-    sd_df: pd.DataFrame | None = None
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """ Parses exams at the `exam_path` as well as the associated study designs and reports. 
-    Performs some preprocessing then returns the exams as dataframes.
+) -> pd.DataFrame:
+    """ Parses exams at the `exam_path` as well as the associated report (if `load_report == True`). 
+    Performs some preprocessing then returns the exam as dataframes.
     """
     # Parsing
-    ex_root, report_df, sd_root = load_data(exam_path, subject, load_report)
-    sd_df = sd_df if sd_df is not None else prepare_sd_df(sd_root, subject)
+    ex_root, report_df = load_exam(exam_path, subject, load_report)
     
     # Prepare exam df manually 
     has_mcq = ex_root.has_mcq
@@ -129,12 +123,11 @@ def prepare_dataframes(
         qn_df = pd.concat([ex_df, rp_df], axis=1)
     else:
         qn_df = ex_df
-    
-    return qn_df, sd_df
+    return qn_df
 
 
-#========== LOADING STUDY DESIGNS IN ISOLATION ===========#
-def load_sd(path: str):
+#========== LOADING STUDY DESIGNS ===========#
+def load_sd(path: str) -> Tree:
     """ Loads the study design at `path`."""
     path = Path(path)
     if not path.exists():
@@ -144,20 +137,22 @@ def load_sd(path: str):
 
 
 def prepare_sd_df(
-    root: Tree,
+    path: str, 
     subject: str
 ) -> pd.DataFrame:
     """ Transforms a study design tree into a pandas DataFrame with two columns:
     `label`, and `text`. 
     """ 
-    is_math = "math" in subject
-    root = TreePreprocessor("study_design", remove_latex=is_math).preprocess(root, subject=subject)
+    root = load_sd(path)
+
+    two_exams = has_two_exams(subject)
+    root = TreePreprocessor("study_design", remove_latex=two_exams).preprocess(root, subject=subject)
 
     df = root.to_df(
         include_root=False,
-        level=(root.find_node_level(r"Area of Study \d") + 1) if is_math else 0
+        level=(root.find_node_level(r"Area of Study \d") + 1) if two_exams else 0
     )
-    if not is_math: 
+    if not two_exams: 
         # Again, this is because math s/d's are different since they're all merged into one
         # Remove all rows not directly related to the relevant subtopics
         df = df.loc[

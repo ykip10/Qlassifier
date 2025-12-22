@@ -1,9 +1,8 @@
 """ Class for preprocessing the text present in trees. """
 import re
 from typing import Literal
-from copy import deepcopy
-
 from src.parser.trees import Tree
+from src.extractor.material_collector import has_two_exams
 
 class TreePreprocessor:
     allowed_latex = ["π"] # Fragmented LaTeX symbols which give context
@@ -16,9 +15,11 @@ class TreePreprocessor:
         """ Initialises Tree Preprocessor object which is used for preprocessing
         trees parsed from exam documents. The types of documents supported
         for preprocessing are `past_exam` and `study_designs`.
-
-        `remove_latex`: Whether or not to skip all LaTeX-like fragments.
-        `is_math`     : Does the document originate from a math subject 
+        
+        Parameters
+        ----------
+        doc_type    : Literal specifying whether the document is a study design or past exam. 
+        remove_latex: Whether or not to skip all LaTeX-like fragments.
         """
         if doc_type not in ["study_design", "past_exam"]:
             raise ValueError("The only allowed doc types are 'study_design' and 'past_exam'.")
@@ -36,15 +37,15 @@ class TreePreprocessor:
         return root 
 
     def _preprocess_sd(self, root: Tree, subject: str) -> Tree:
-        is_math = "math" in subject.lower()
-        if is_math:
+        two_exams = has_two_exams(subject)
+        if two_exams:
             root = root.label_search(rf"Units 3 and 4: {std_str(subject)}")[0]
         else:
             root.filter_tree(r"Unit(s)? (3|4)")
         aos_re = r"Area of Study \d?$"
         # only care about content-describing sections
         root.filter_tree(aos_re)
-        if not is_math:
+        if not two_exams:
             outcome_re = r"Outcome \d"
             level = root.find_node_level(outcome_re)
             outcome_nodes = root.label_search(outcome_re)

@@ -13,6 +13,7 @@ class Results:
         self,
         pred_df: pd.DataFrame,
         cos: Sequence[Sequence[float]],
+        subject: str,
         sd_labels: list[str] | None = None,
         *, 
         correct_topics: list[str] | None = None,
@@ -20,13 +21,16 @@ class Results:
     ):  
         """ Object containing model results. 
 
-        `pred_df`       : DataFrame containing model predictions.
-        `cos`           : Cosine similarity matrix from models predictions.
-        `sd_labels`     : Study design topic labels.
-        `correct_topics`: Ground truth topic labels, if available.
-        `idx_pred_col`  : Which column of `pred_df` contains the topic index prediction.
+        Parameters
+        ----------
+        pred_df       : DataFrame containing model predictions.
+        cos           : Cosine similarity matrix from models predictions.
+        subject       : The relevant subject. 
+        sd_labels     : Study design topic labels.
+        correct_topics: Ground truth topic labels, if available.
+        idx_pred_col  : Which column of `pred_df` contains the topic index prediction.
 
-        Note that many evaluation methods ASSUME the columns of `pred_df`. 
+        Note that many evaluation methods ASSUME the column names of `pred_df`. 
         """
         self._pred_df = pred_df
         # Convert to numpy for standardisation & compatibility with pandas
@@ -36,6 +40,7 @@ class Results:
             self.cos = np.array(cos)
         else:
             self.cos = cos
+        self.subject = subject
         self.sd_labels = sd_labels if sd_labels is not None else []
         
         self._correct_topics = correct_topics if correct_topics is not None else []

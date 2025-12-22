@@ -26,20 +26,22 @@ RP_DIR_NAME = "past_reports"
 
 def vcaa_extract_exam_materials(
     subject: str,
-    years: Sequence[int],
+    years: Sequence[int | str],
     reports: bool = True,
     exams: bool = True
 ) -> int: 
     """ Extracts desired subject's past examinations publicly displayed on the VCAA website. 
-    Uses beautiful soup.
+    Uses `BeautifulSoup`.
 
-    `subject`: Exact subject name of the VCE/VET subject whose past
-               examinations are to be scraped. 
-    `years`  : Examination years to extract.
-    `reports`: Whether or not to extract assessment reports. 
-    `exams`  : Whether or not to extract examination documents. 
+    Parameters
+    ----------
+    subject: Exact subject name of the VCE/VET subject whose past
+             examinations are to be scraped. 
+    years  : Examination years to extract.
+    reports: Whether or not to extract assessment reports. 
+    exams  : Whether or not to extract examination documents. 
     """
-    is_math = "mathematic" in subject.lower() # Math subjects have two examinations
+    two_exams = has_two_exams(subject) # Math subjects have two examinations
     headers = {"User-Agent": "Mozilla/5.0"}   # Need header to extract from VCAA 
 
     file_dir = DATA_DIR / subject.strip().lower().replace(" ", "_")
@@ -49,8 +51,8 @@ def vcaa_extract_exam_materials(
     report_dir = file_dir / RP_DIR_NAME
     report_dir.mkdir(exist_ok=True, parents=True)
 
-    exam_years = required_years(exam_dir, years, is_math)
-    report_years = required_years(report_dir, years, is_math)
+    exam_years = required_years(exam_dir, years, two_exams)
+    report_years = required_years(report_dir, years, two_exams)
 
     if not report_years and not exam_years:
         # Nothing to download
@@ -68,7 +70,7 @@ def vcaa_extract_exam_materials(
             re.IGNORECASE,
         )
         
-        if not save_link(soup, exam_pattern, exam_dir, is_math):
+        if not save_link(soup, exam_pattern, exam_dir, two_exams):
             print(f"Unable to find an exam for {subject} over the years {exam_years}")
             return 0
     
@@ -79,16 +81,15 @@ def vcaa_extract_exam_materials(
             re.IGNORECASE,
         )
 
-        if not save_link(soup, report_pattern, report_dir, is_math):
+        if not save_link(soup, report_pattern, report_dir, two_exams):
             print(f"Problem finding exam reports for {subject} over the years {report_years}")
             return 0
     return 1
 
 
 def extract_sds(subject: str) -> int:
-    """ Extracts latest study designs from the VCAA website using Beautiful Soup.
-
-    `subject`: Subject whose study design is to be extracted.  
+    """ Extracts latest study designs from the VCAA 
+    website for `subject` using `BeautifulSoup`.
     """
     subject_clean = subject.strip().lower().replace(" ", "_")
     file_dir = DATA_DIR / subject_clean / SD_DIR_NAME
@@ -143,16 +144,18 @@ def save_link(
     soup,
     pattern: str,
     save_dir: str,
-    is_math: bool = False,
+    two_exams: bool = False,
     headers: str = {"User-Agent": "Mozilla/5.0"}
 ) -> int:
     """ Saves an exam/report/study-design contained in `soup`.
     
-    `soup`    : Beautiful soup object for the page to be scraped 
-    `pattern` : Pattern of hypertext we want to scrape from
-    `save_dir`: Directory the file should be saved in. 
-    `is_math` : Is the subject being scraped a math one.
-    `headers` : Headers to use while scraping. 
+    Parameters
+    ----------
+    soup     : `BeautifulSoup` object for the page to be scraped 
+    pattern  : Pattern of hypertext we want to scrape from
+    save_dir : Directory the file should be saved in. 
+    two_exams: Does the subject being scraped have two exams?
+    headers  : Headers to use while scraping. 
 
     Returns `0` if no links were found, `1` otherwise. 
     """
@@ -166,14 +169,14 @@ def save_link(
         numbers = re.findall(r"\d+", text)
         
         year = numbers[0]
-        num = numbers[1] if is_math else None
+        num = numbers[1] if two_exams else None
         
         # Get file extension
         parsed_url = urlparse(full_url)
         ext = Path(parsed_url.path).suffix
 
         # set up directory
-        file_name = f"{year}_{num}{ext}" if is_math else f"{year}{ext}"
+        file_name = f"{year}_{num}{ext}" if two_exams else f"{year}{ext}"
         save_dir.mkdir(parents=True, exist_ok=True)
         save_path = save_dir / file_name
         if save_path.exists(): # already saved
@@ -217,8 +220,8 @@ def find_exams_page(subject: str, headers: dict[str, str]) -> str:
 
 def required_years(
     file_dir: str,
-    years: list[int],
-    is_math: bool = False
+    years: Sequence[int | str],
+    two_exams: bool = False
 ) -> list[int]:
     """ Returns the subset of years which have not already been downloaded. 
     Only cares about years. 
@@ -229,7 +232,7 @@ def required_years(
     needed_yrs = []
     for year in years: 
         file_base = f"{year}"
-        if is_math:
+        if two_exams:
             file_base_1 = file_base + "_1"
             file_base_2 = file_base + "_2"
             # Check if we have any matches for this year; skip only if we have both 
@@ -246,6 +249,15 @@ def required_years(
     return needed_yrs
 
 
+def has_two_exams(subject: str) -> bool:
+    """ Finds the number of exams per year for the subject. The only examinations with 
+    two exams are mathematics subjects, and the only mathematics subject with one examination
+    is foundational mathematics. 
+    """
+    subject = subject.strip().lower().replace(" ", "_") 
+    return "math" in subject and "foundational" not in subject
+
+
 def main(argv: list[str] | None = None) -> int: 
     argv = argv or sys.argv[1:]
     if not argv or len(argv) > 2:
@@ -254,7 +266,7 @@ def main(argv: list[str] | None = None) -> int:
     
     subject, years = argv
     years = years.split(",")
-
+    
     if not vcaa_extract_exam_materials(subject, years): 
         return 1
     if not extract_sds(subject):

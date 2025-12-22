@@ -11,7 +11,7 @@ instead of using a combined model.
 import sys 
 from pathlib import Path
 
-from src.Qlassifier.prediction import InstructPredictor, run_tf_idf
+from src.Qlassifier.prediction import InstructPredictor, TfIdfPredictor
 from src.extractor import material_collector as mc
 from src.paths import DATA_DIR
 
@@ -49,18 +49,17 @@ def run_pipeline(
         results.print_top3s()
         return 0
     
+    sd_path = path.parents[1] / "study_design" / f"{subject}_sd.docx"
     # Running either a tf-idf or instructor exclusive model
     if argv[2] == "tf-idf":
-        pred = run_tf_idf(path, subject=subject)
-        results = pred.run(path)
+        pred = TfIdfPredictor(sd_path, subject=subject)
     elif argv[2] == "instructor":
-        sd_path=path.parents[1] / "study_design" / f"{subject}_sd.docx"
-        pred = InstructPredictor(sd_path=sd_path, subject=subject)
-        results = pred.run(path)
+        pred = InstructPredictor(sd_path, subject=subject)
     else: 
         print("Third argument must be either empty or equal to 'tf-idf.'")
         return 1
     
+    results = pred.run(path)
     results.print_top3s()
     return 0
 

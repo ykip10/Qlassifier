@@ -3,7 +3,7 @@ most data. Trees support label search, filtering, printing, and other functions
 for processing data in the tree format. Node labels in the object definition 
 are synonomous to the header titles from the documents from which the trees are built. 
 """
-from typing import Self, Callable, Optional
+from typing import Self, Callable, Any
 import re
 import pandas as pd
 
@@ -50,6 +50,9 @@ class Tree:
         self.children = []
         self.has_mcq = self._has_mcq()
     
+    def __repr__(self): 
+        return f"Tree(label={self.label!r}, level=({self.level!r}))"
+
     def _has_mcq(self):
         return bool(self.label_search(pattern=r"(?i)multiple[- ]choice"))
 
@@ -68,7 +71,7 @@ class Tree:
             stack[-1].children.append(node)
             stack.append(node)
 
-    def label_search(self, pattern: str) -> list:
+    def label_search(self, pattern: str, non_re: Any | None = None) -> list:
         """ Searches tree for a child node with a regex match between the pattern and the node 
         label using depth-first search (dfs). Returns None if no match was found. 
         """
