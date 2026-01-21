@@ -22,6 +22,4 @@
 __pycache__/
 # Ignore pickle dumps 
 saved_results/ 
-# Ignore incomplete code
-src/api
 

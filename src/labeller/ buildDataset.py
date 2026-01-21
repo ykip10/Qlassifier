@@ -13,7 +13,7 @@ from src.Qlassifier.results import Results
 from src.Qlassifier.prediction import (SentenceTransPredictor,
                                        InstructPredictor,\
                                         TfIdfPredictor)
-from src.extractor import material_collector as mc
+from src.extractor import materialCollector as mc
 from src.paths import DATA_DIR
 import scope
 
@@ -92,7 +92,7 @@ def get_results(
                 year_results = [predictor.run(exam) for exam in exam_paths]
                 for i, res in enumerate(year_results):
                     res.add_pred_column("exam_name", exam_names[i])
-                year_results_merged = pd.concat(year_results, ignore_index=True)
+                year_results_merged = pd.concat(year_results, ignore_index=True)     
                 subj_results.append(year_results_merged)
             # Finally, merge all exams for this subject
             subj_results_merged = pd.concat(subj_results, ignore_index=True)

@@ -2,8 +2,8 @@
 from __future__ import annotations 
 from typing import TYPE_CHECKING, Literal, Union
 
-import extractor.material_collector as mc
-from parser.report_processor import ReportProcessor
+import src.extractor.materialCollector as mc
+from src.parser.reportProcessor import ReportProcessor
 from parser.parsers import AutoParser
 from paths import DATA_DIR
 
@@ -25,7 +25,8 @@ def process_material(
     ]
 ]:  
     """ Downloads material requested by type, then processes them. Returns 
-    a dictionary mapping each subject to the processed output. """
+    a dictionary mapping each subject to the processed output.
+    """
     
     # Sort out function definitions based on the type of document 
     def parse(path: str):

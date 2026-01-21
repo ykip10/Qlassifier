@@ -7,11 +7,11 @@ from pathlib import Path
 
 import pandas as pd 
 
-from src.preprocessor.tree_preprocessor import TreePreprocessor
+from src.preprocessor.treePreprocessor import TreePreprocessor
 from src.parser.trees import Tree
 from src.parser.parsers import AutoParser
-from src.parser.report_processor import ReportProcessor
-from src.extractor.material_collector import has_two_exams
+from src.parser.reportProcessor import ReportProcessor
+from src.extractor.materialCollector import has_two_exams
 from src.paths import DATA_DIR
 
 #=========== LOADING EXAMS==========#

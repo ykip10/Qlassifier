@@ -30,7 +30,8 @@ class Results:
         correct_topics: Ground truth topic labels, if available.
         idx_pred_col  : Which column of `pred_df` contains the topic index prediction.
 
-        Note that many evaluation methods ASSUME the column names of `pred_df`. 
+        Note that many evaluation methods ASSUME the column names of `pred_df`. For example,
+        the predicted topic column is assumed to be called `pred_topic_idx`.
         """
         self._pred_df = pred_df
         # Convert to numpy for standardisation & compatibility with pandas
@@ -87,12 +88,14 @@ class Results:
     ) -> pd.DataFrame | pd.Series | None: 
         """ Produces a summary of results stored in a DataFrame. 
         
-        `by`    : if `by == "topic"`, calculates precision, recall, f1-scores, 
-                  counts and proportions for each topic. 
-                  if `by == "overall"`, calculates weighted and macro classification metrics, 
-                  as well as accuracy and top 3 accuracy. 
-        `subset`: Sequence of indices for subsetting the question predictions. 
-                  Will only report results on this subset. 
+        Parameters
+        ---------
+        by    : if `by == "topic"`, calculates precision, recall, f1-scores, 
+                counts and proportions for each topic. 
+                if `by == "overall"`, calculates weighted and macro classification metrics, 
+                as well as accuracy and top 3 accuracy. 
+        subset: Sequence of indices for subsetting the question predictions. 
+                Will only report results on this subset. 
         """
         if subset is not None:
             df = self.pred_df.copy().loc[subset]
@@ -198,13 +201,11 @@ class Results:
     def print_top3s(self):
         """ Prints top 3 results using study design labels. """
         top3s = self.build_top3s(ndigits=3)
-        for qn_idx in range(len(top3s)):
-            qn = self.qn_labels[qn_idx]
-            print(f"{qn}: {top3s[qn_idx]}")
+        print(top3s)
             
     def top3_sims(self, qn_idx: int) -> list[tuple[int, float]]:
         """ Returns a list of tuples containing the top 3 topics with highest similarity
-        and their normalised similarity scores. 
+        and their normalised similarity scores in the form [(idx, normalised_sim), ...]
         """
         sims = list(self.cos[qn_idx])
         sims_min, sims_max = min(sims), max(sims)
@@ -225,10 +226,13 @@ class Results:
         for each question, where the similarity is optionally rounded to 
         `ndigits` decimal points. 
         """
-        top3s = []
+        qn_to_pred = {}
+        qns = self.qn_labels
+        #top3s = []
         for qn_idx in range(len(self.cos)):
+            qn = qns[qn_idx]
             top3 = self.top3_sims(qn_idx)
-            # Switch sd-idx for the actual sd label instead,
+            # Switch sd-idx for the actual sd label instead
             if ndigits is not None: 
                 top3_with_labels = [(self.sd_labels[sd_idx], round(sim, ndigits)) \
                                      for sd_idx, sim in top3]
@@ -236,8 +240,9 @@ class Results:
                 top3_with_labels = [(self.sd_labels[sd_idx], sim) \
                                     for sd_idx, sim in top3]
             
-            top3s.append(top3_with_labels)
-        return top3s
+            qn_to_pred[qn] = top3_with_labels
+            #top3s.append(top3_with_labels)
+        return qn_to_pred
 
     def correct_in_top3(
         self,
@@ -264,7 +269,6 @@ class Results:
         pred1 = self.idx_pred_col
         df = self.pred_df
         n = len(df)
-
         print("--EVAL METRICS--")
         ex_correct_pc = len(df[df["true_topic_idx"] == df[pred1]]) / n
         print(f"{pred1} accuracy: {100*ex_correct_pc:.2f}%")
@@ -272,10 +276,8 @@ class Results:
         if cos2 is not None:
             pred2 = second_pred_col
             # Print data w.r.t second similarity column as well
-
             # Calculate the accuracy of our second column 
             rp_correct_pc = len(df[df["true_topic_idx"] == df[pred2]]) / n
-
             # Calculate the amount of times either one of our two columns got the correct topic
             one_correct_pc = len(
                 df[
@@ -283,15 +285,12 @@ class Results:
                     (df["true_topic_idx"] == df[pred2])
                 ]
             ) / n  
-            
             # Print results
             print(f"{pred2} accuracy: {100*rp_correct_pc:.2f}%")
-            
             print(
                 f"The percent of time either {pred2} or {pred1} "
                 f"labels a question correctly is {100*one_correct_pc:.2f}%"
             )
-            
             # Additionally print top 3 probability (for the second column)
             print(
                 f"% of time the true topic in top 3 {pred2} prediction: " 
@@ -299,7 +298,6 @@ class Results:
                     self.correct_in_top3(qn_idx,df,cos2) for qn_idx in range(n)
                 ]) / n):.2f}%"
             )
-
         # Top 3 probability for the first column 
         print(
             f"% of time the true topic in top 3 {pred1} prediction: "

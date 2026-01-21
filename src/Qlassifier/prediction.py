@@ -12,7 +12,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer, util
 from InstructorEmbedding import INSTRUCTOR
 
-from src.preprocessor.tree_preprocessor import std_str
+from src.preprocessor.treePreprocessor import std_str
 from src.preprocessor.loading import prepare_sd_df, prepare_exam_df
 from src.Qlassifier.results import Results
 
@@ -57,10 +57,12 @@ class TransformerPredictor(ABC):
         """ Runs the predictor on an exam, and returns the result      
         as a `Results` object. 
 
-        `exam`          : Either a string/path object pointing to an exam, or a pandas dataframe
-                          Containing the questions of an exam and their associated text. 
-        `include_report`: Whether or not to draw on the examiner's report to assist with classification.
-                          Can only be `True` if the exam points to a path. 
+        Parameters
+        ----------
+        exam          : Either a string/path object pointing to an exam, or a pandas dataframe
+                        Containing the questions of an exam and their associated text. 
+        include_report: Whether or not to draw on the examiner's report to assist with classification.
+                        Can only be `True` if the exam points to a path. 
         """
         if isinstance(exam, str) or isinstance(exam, Path):
             pred_df = prepare_exam_df(exam, subject=self.subject, load_report=include_report)
@@ -176,10 +178,10 @@ class TfIdfPredictor:
         include_report: bool = False,
     ) -> Results:
         """ Runs TF-IDF on an exam and the subject's study design.
-        Returns:
-            - dataframe containing predictions (optionally with correct labels, if provided)
-            - study design topic labels
-            - cosine similarity matrix
+
+        Returns
+        ------
+        `Results` object. 
         """ 
         if isinstance(exam, str) or isinstance(exam, Path):
             qn_df = prepare_exam_df(exam, subject=self.subject, load_report=include_report)

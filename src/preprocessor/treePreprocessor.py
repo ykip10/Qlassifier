@@ -2,7 +2,7 @@
 import re
 from typing import Literal
 from src.parser.trees import Tree
-from src.extractor.material_collector import has_two_exams
+from src.extractor.materialCollector import has_two_exams
 
 class TreePreprocessor:
     allowed_latex = ["π"] # Fragmented LaTeX symbols which give context
