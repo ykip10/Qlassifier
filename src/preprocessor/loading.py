@@ -53,9 +53,16 @@ def prepare_exam_df(
     exam_path: str,
     subject: str,
     load_report: bool = False,
+    year: int | None = None
 ) -> pd.DataFrame:
     """ Parses exams at the `exam_path` as well as the associated report (if `load_report == True`). 
-    Performs some preprocessing then returns the exam as dataframes.
+    Runs preprocessor then returns the exam as dataframes.
+
+    Parameters
+    ----------
+    exam_path  : Path to the exam pdf 
+    subject    : Name of the subject the examination is examining.
+    load_report: Whether or not we should process the report along with the exam
     """
     # Parsing
     ex_root, report_df = load_exam(exam_path, subject, load_report)

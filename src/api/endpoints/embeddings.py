@@ -2,8 +2,7 @@ from collections import defaultdict as dd
 
 from fastapi import File, UploadFile, APIRouter
 
-from src.Qlassifier.prediction import run_instructor
-from src.api.models.embeddings import instructor
+from src.run_pipeline import run_pipeline
 
 router = APIRouter()
 

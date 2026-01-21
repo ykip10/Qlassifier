@@ -55,7 +55,7 @@ class Results:
     @property
     def correct_topics(self):
         return self._correct_topics
-    
+
     @correct_topics.setter
     def correct_topics(self, value):
         """ Edit `pred_df` to include the new ground truth labels. """
@@ -64,6 +64,21 @@ class Results:
             lambda x: self.sd_labels[x]
         )
         self._correct_topics = value
+
+    def add_pred_column(self, name: str, values):
+        """
+        Add a column to the internal prediction DataFrame.
+
+        Parameters
+        ----------
+        name  : Column name to add
+        values: Column values (must align with pred_df rows)
+        """
+        if len(values) != len(self._pred_df):
+            raise ValueError(
+                f"Length mismatch: got {len(values)}, expected {len(self._pred_df)}"
+            )
+        self._pred_df[name] = values
 
     def summary(
         self,

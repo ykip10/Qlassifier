@@ -2,7 +2,7 @@
 Script to collect VCAA past exams and study design for a given VCE subject.
 Saves scraped data to ../data/subject_name.
 
-Usage: python3 -m src.extractor.material_collector subject_name year1,year2,year3...
+Usage: python3 -m src.extractor.materialCollector subject_name year1,year2,year3...
 """
 
 import sys
