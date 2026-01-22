@@ -45,7 +45,6 @@ def run_model_pipeline(
     path = Path(path)
     # Try to load a path if None given
     sd_path = Path(sd_path) if sd_path is not None else path.parents[1] / "study_design" / f"{subject}_sd.docx"
-    print(sd_path)
     if not sd_path.exists():
         raise ValueError("Unable to load a study design. Please provide a path.")
     

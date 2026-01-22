@@ -12,11 +12,16 @@
 !notebooks/
 !notebooks/**
 
-# Add repo related files 
+# Version control files
 !.gitignore
 !.gitattributes
 !README.md
 !requirements.txt
+
+# Docker configs
+!.dockerignore
+!Dockerfile
+!compose.yaml
 
 # Ignore python byte-code
 __pycache__/

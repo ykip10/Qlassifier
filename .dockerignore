@@ -1,0 +1,18 @@
+# ignore everything
+
+### Copied .gitignore ###
+# Add main src 
+!src/
+!src/**
+!scope.py
+!tests/
+!tests/**
+
+# Add requirements
+!requirements.txt
+
+# Ignore python byte-code
+__pycache__/
+###
+
+
