@@ -1,6 +1,12 @@
 This is a VCE exam question classifier based on NLP techniques. We use a transformers model to classify exam questions based on predetermined topics given by VCAA [study designs](https://www.vcaa.vic.edu.au/curriculum/vce-curriculum/vce-study-designs/vce-study-designs). We also build an end-to-end data extraction & processing pipeline to streamline predictions. Currently in development. 
 
-You can demo the application by going to [run_instructor_endpoint_run_instructor_post](https://qlassifier-app-233789415416.asia-southeast1.run.app/docs)!
+## Demo
+You can demo the application by going to [the FastAPI docs](https://qlassifier-app-233789415416.asia-southeast1.run.app/docs) and following these instructions:
+
+- Uncollapse the /run_instructor endpoint and click "Try Out."
+- Enter a subject name & supply a past VCAA exam for that subject
+- Click run
+- Results will show as list of 3-tuples suggesting the top 3 topics for each question from the exam, with associated confidence scores. 
 
 # How to use Command Line Interface (CLI)
 Make sure we're in the root directory.
