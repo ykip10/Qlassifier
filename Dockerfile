@@ -7,9 +7,9 @@ WORKDIR /app
 FROM base AS builder
 # Copy only requirements.txt first for better cache utilization
 COPY requirements.txt ./
-# Create virtual environment and install dependencies
-RUN --mount=type=cache,target=/root/.cache/pip \
-    python -m venv .venv && \
+
+# lead with --mount=type=cache,target=/root/.cache/pip for local build 
+RUN python -m venv .venv && \
     .venv/bin/pip install --upgrade pip && \
     .venv/bin/pip install -r requirements.txt
 
