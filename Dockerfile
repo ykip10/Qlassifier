@@ -6,7 +6,7 @@ WORKDIR /app
 # Builder stage: install dependencies in a venv
 FROM base AS builder
 # Copy only requirements.txt first for better cache utilization
-COPY --link requirements.txt ./
+COPY requirements.txt ./
 # Create virtual environment and install dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
     python -m venv .venv && \
@@ -20,7 +20,7 @@ RUN useradd -m appuser
 USER appuser
 
 # Copy the virtual environment from builder
-COPY --link --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy application source code
