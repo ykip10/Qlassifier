@@ -9,8 +9,10 @@
 !tests/**
 
 # We need study designs
+!data/
+!data/*/
+!data/*/study_design/
 !data/*/study_design/*_sd.docx
-
 
 # Add notebooks
 !notebooks/
