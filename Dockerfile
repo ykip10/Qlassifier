@@ -24,15 +24,15 @@ COPY --link --from=builder /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy application source code
-COPY --link src/ ./src/
-COPY --link data/ ./data/
-COPY --link notebooks/ ./notebooks/
-COPY --link scope.py ./scope.py
-COPY --link requirements.txt ./requirements.txt
-COPY --link README.md ./README.md
+COPY src/ ./src/
+COPY data/ ./data/
+COPY notebooks/ ./notebooks/
+COPY scope.py ./scope.py
+COPY requirements.txt ./requirements.txt
+COPY README.md ./README.md
 
-# Expose port if needed (uncomment and set correct port if applicable)
-# EXPOSE 8000
+# Expose port 
+EXPOSE 8080
 
-# Set default entrypoint (adjust as needed, e.g. for API service)
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Set default entrypoint
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8080"]

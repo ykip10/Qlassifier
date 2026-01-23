@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     init: true
     ports:
-      - "8000:8000"  # Uncomment and set correct port if API is exposed
+      - "8080:8080"  # Uncomment and set correct port if API is exposed
     # If you add external services (e.g. database), add depends_on here
     # depends_on:
     #   - postgres
