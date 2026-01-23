@@ -8,6 +8,10 @@
 !tests/
 !tests/**
 
+# We need study designs
+!data/*/study_design/*_sd.docx
+
+
 # Add notebooks
 !notebooks/
 !notebooks/**
@@ -25,6 +29,7 @@
 
 # Ignore python byte-code
 __pycache__/
+
 # Ignore pickle dumps 
 saved_results/ 
 
