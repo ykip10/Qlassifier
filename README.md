@@ -1,5 +1,7 @@
 This is a VCE exam question classifier based on NLP techniques. We use a transformers model to classify exam questions based on predetermined topics given by VCAA [study designs](https://www.vcaa.vic.edu.au/curriculum/vce-curriculum/vce-study-designs/vce-study-designs). We also build an end-to-end data extraction & processing pipeline to streamline predictions. Currently in development. 
 
+You can demo the application by going to [run_instructor_endpoint_run_instructor_post](https://qlassifier-app-233789415416.asia-southeast1.run.app/docs)!
+
 # How to use Command Line Interface (CLI)
 Make sure we're in the root directory.
 ```
@@ -54,8 +56,8 @@ as well as formulating an aggregate difficulty metric for each subject's MCQ sec
 
 - Document collection and parsing (completed) 
 - Data analysis and visualisations (completed)
-- Modelling (in development)
-- Deployment (simple API only)
+- Modelling (elementary approach completed, much room for improvement)
+- Deployment (API deployed to Google Cloud)
 
 # Current limitations: 
 
