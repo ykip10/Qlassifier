@@ -6,11 +6,9 @@ from src.runPipeline import run_model_pipeline
 
 router = APIRouter()
 
+
 @router.post("/run_instructor")
-async def run_instructor_endpoint(
-    subject: str,
-    file: UploadFile = File(...)
-):
+async def run_instructor_endpoint(subject: str, file: UploadFile = File(...)):
     contents = await file.read()
 
     tmp_path = f"/tmp/{file.filename}"
@@ -21,3 +19,4 @@ async def run_instructor_endpoint(
     res = run_model_pipeline(tmp_path, subject, model="instructor", sd_path=sd_path)
     out = res.build_top3s(ndigits=3)
     return out
+
