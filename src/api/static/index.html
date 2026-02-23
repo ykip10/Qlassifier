@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head
+<head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Instructor Model Runner</title>
@@ -11,8 +11,8 @@
       color: white;
       display: flex;
       justify-content: center;
-      align-items: center;
-      height: 100vh;
+      align-items: flex-start;
+      padding-top: 50px;
       margin: 0;
     }
 
@@ -20,8 +20,9 @@
       background: #1e293b;
       padding: 2rem;
       border-radius: 16px;
-      width: 400px;
+      width: 500px;
       box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      margin-bottom: 2rem;
     }
 
     h1 {
@@ -29,7 +30,7 @@
       font-size: 1.5rem;
     }
 
-    input, button {
+    select, input[type=file], button {
       width: 100%;
       padding: 0.75rem;
       margin-top: 1rem;
@@ -38,7 +39,12 @@
       font-size: 1rem;
     }
 
-    input {
+    select {
+      background: #334155;
+      color: white;
+    }
+
+    input[type=file] {
       background: #334155;
       color: white;
     }
@@ -60,21 +66,33 @@
       cursor: not-allowed;
     }
 
-    .result {
-      margin-top: 1.5rem;
-      background: #0f172a;
-      padding: 1rem;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      max-height: 200px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-    }
-
     .loading {
       margin-top: 1rem;
       font-size: 0.9rem;
       color: #94a3b8;
+    }
+
+    .result-card {
+      background: #0f172a;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+
+    .question-title {
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
+    .answer {
+      padding-left: 1rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .score {
+      color: #3b82f6;
+      font-weight: bold;
+      margin-left: 0.5rem;
     }
   </style>
 </head>
@@ -83,7 +101,9 @@
   <div class="card">
     <h1>Run Instructor Model</h1>
 
-    <input id="subject" type="text" placeholder="Enter subject (e.g. Linear Algebra)" />
+    <select id="subject">
+      <option value="">Loading subjects...</option>
+    </select>
 
     <input id="file" type="file" />
 
@@ -93,29 +113,50 @@
       Processing...
     </div>
 
-    <div class="result" id="result"></div>
+    <div id="result"></div>
   </div>
 
   <script>
-    const API_URL = https://qlassifier-app-233789415416.asia-southeast1.run.app
+    const API_URL = "/run_instructor";
+    const SUBJECTS_URL = "/subjects";  // New endpoint to fetch subjects
 
     const submitBtn = document.getElementById("submitBtn");
     const resultDiv = document.getElementById("result");
     const loadingDiv = document.getElementById("loading");
+    const subjectSelect = document.getElementById("subject");
+
+    // Load subjects dynamically
+    async function loadSubjects() {
+      try {
+        const res = await fetch(SUBJECTS_URL);
+        const data = await res.json();
+        subjectSelect.innerHTML = "";
+        data.forEach(subject => {
+          const opt = document.createElement("option");
+          opt.value = subject;
+          opt.textContent = subject;
+          subjectSelect.appendChild(opt);
+        });
+      } catch (err) {
+        subjectSelect.innerHTML = `<option value="">Error loading subjects</option>`;
+      }
+    }
+
+    loadSubjects();
 
     submitBtn.addEventListener("click", async () => {
-      const subject = document.getElementById("subject").value;
+      const subject = subjectSelect.value;
       const fileInput = document.getElementById("file");
       const file = fileInput.files[0];
 
       if (!subject || !file) {
-        alert("Please enter subject and select a file.");
+        alert("Please select a subject and a file.");
         return;
       }
 
       submitBtn.disabled = true;
       loadingDiv.style.display = "block";
-      resultDiv.textContent = "";
+      resultDiv.innerHTML = "";
 
       const formData = new FormData();
       formData.append("subject", subject);
@@ -128,11 +169,35 @@
         });
 
         if (!response.ok) {
-          throw new Error("Server error");
+          const text = await response.text();
+          throw new Error(`Server error: ${response.status}\n${text}`);
         }
 
         const data = await response.json();
-        resultDiv.textContent = JSON.stringify(data, null, 2);
+
+        // Pretty render
+        for (const [question, answers] of Object.entries(data)) {
+          const qCard = document.createElement("div");
+          qCard.className = "result-card";
+
+          const qTitle = document.createElement("div");
+          qTitle.className = "question-title";
+          qTitle.textContent = question;
+          qCard.appendChild(qTitle);
+
+          answers.forEach(([answerText, score]) => {
+            const aDiv = document.createElement("div");
+            aDiv.className = "answer";
+            aDiv.textContent = answerText;
+            const sSpan = document.createElement("span");
+            sSpan.className = "score";
+            sSpan.textContent = score.toFixed(3);
+            aDiv.appendChild(sSpan);
+            qCard.appendChild(aDiv);
+          });
+
+          resultDiv.appendChild(qCard);
+        }
 
       } catch (err) {
         resultDiv.textContent = "Error: " + err.message;
