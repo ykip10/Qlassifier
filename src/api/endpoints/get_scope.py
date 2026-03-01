@@ -1,6 +1,5 @@
-# main.py or endpoints file
 from fastapi import APIRouter
-from scope import SUBJECTS  # make sure scope.py is at root and has SUBJECTS list
+from scope import SUBJECTS
 
 router = APIRouter()
 
