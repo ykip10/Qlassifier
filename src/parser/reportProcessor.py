@@ -5,18 +5,18 @@ outlining it's correct answer, any comments, and the mark distribution associate
 """
 
 import re
-from pathlib import Path
-from copy import deepcopy
 from collections import defaultdict as dd
+from copy import deepcopy
+from pathlib import Path
 
-from docx.enum.text import WD_COLOR_INDEX
 import pandas as pd
+from docx.enum.text import WD_COLOR_INDEX
 
 from src.parser.parsers import PDFParser, WordParser
 from src.parser.utils import (
+    convert_extracted_tables,
     get_tables,
     process_tables,
-    convert_extracted_tables,
     standardise_mcq_df,
 )
 
@@ -219,4 +219,3 @@ class ReportProcessor:
                 )
             results[idx] = new_df
         return results
-

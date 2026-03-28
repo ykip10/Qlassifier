@@ -5,13 +5,15 @@ Saves scraped data to ../data/subject_name.
 Usage: python3 -m src.extractor.materialCollector subject_name year1,year2,year3...
 """
 
-import sys
-from pathlib import Path
+import asyncio
 import re
+import sys
+import time
+from pathlib import Path
 from typing import Sequence
 from urllib.parse import urljoin, urlparse
 
-import requests
+import httpx
 from bs4 import BeautifulSoup
 
 from src.paths import DATA_DIR
@@ -24,25 +26,26 @@ EXAM_DIR_NAME = "past_exams"
 RP_DIR_NAME = "past_reports"
 
 
-def vcaa_extract_exam_materials(
+async def vcaa_extract_exam_materials(
     subject: str,
+    client: httpx.AsyncClient,
     years: Sequence[int | str],
     reports: bool = True,
-    exams: bool = True
-) -> int: 
-    """ Extracts desired subject's past examinations publicly displayed on the VCAA website. 
+    exams: bool = True,
+) -> int:
+    """Extracts desired subject's past examinations publicly displayed on the VCAA website.
     Uses `BeautifulSoup`.
 
     Parameters
     ----------
     subject: Exact subject name of the VCE/VET subject whose past
-             examinations are to be scraped. 
+             examinations are to be scraped.
     years  : Examination years to extract.
-    reports: Whether or not to extract assessment reports. 
-    exams  : Whether or not to extract examination documents. 
+    reports: Whether or not to extract assessment reports.
+    exams  : Whether or not to extract examination documents.
     """
-    two_exams = has_two_exams(subject) # Math subjects have two examinations
-    headers = {"User-Agent": "Mozilla/5.0"}   # Need header to extract from VCAA 
+    two_exams = has_two_exams(subject)  # Math subjects have two examinations
+    headers = {"User-Agent": "Mozilla/5.0"}  # Need header to extract from VCAA
 
     file_dir = DATA_DIR / subject.strip().lower().replace(" ", "_")
     file_dir.mkdir(exist_ok=True, parents=True)
@@ -58,9 +61,10 @@ def vcaa_extract_exam_materials(
         # Nothing to download
         return 1
 
-    full_url = find_exams_page(subject, headers=headers)
-    # Now we find any matching examinations/reports. 
-    html = requests.get(full_url, headers=headers).text
+    full_url = await find_exams_page(subject, headers=headers, client=client)
+    # Now we find any matching examinations/reports.
+    html_resp = await client.get(full_url, headers=headers)
+    html = html_resp.text
     soup = BeautifulSoup(html, "html.parser")
     if exams and exam_years:
         # We extract hyperlinks which match VCAA hypertext naming convention
@@ -69,11 +73,14 @@ def vcaa_extract_exam_materials(
             rf"^(?=.*\bexam(?:ination)?\b)(?!.*\breport\b)(?!.*\bassessment\b)(?=.*\b({exam_year_pattern})\b)",
             re.IGNORECASE,
         )
-        
-        if not save_link(soup, exam_pattern, exam_dir, two_exams):
+
+        save_exam = await save_link(
+            soup, exam_pattern, exam_dir, client, two_exams=two_exams, headers=headers
+        )
+        if not save_exam:
             print(f"Unable to find an exam for {subject} over the years {exam_years}")
             return 0
-    
+
     if reports and report_years:
         report_year_pattern = "|".join(map(str, report_years))
         report_pattern = re.compile(
@@ -81,14 +88,25 @@ def vcaa_extract_exam_materials(
             re.IGNORECASE,
         )
 
-        if not save_link(soup, report_pattern, report_dir, two_exams):
-            print(f"Problem finding exam reports for {subject} over the years {report_years}")
+        save_report = await save_link(
+            soup,
+            report_pattern,
+            report_dir,
+            client,
+            two_exams=two_exams,
+            headers=headers,
+        )
+        if not save_report:
+            print(
+                f"Problem finding exam reports for {subject} over the years {report_years}"
+            )
             return 0
+
     return 1
 
 
-def extract_sds(subject: str) -> int:
-    """ Extracts latest study designs from the VCAA 
+async def extract_sds(subject: str, client: httpx.AsyncClient) -> int:
+    """Extracts latest study designs from the VCAA
     website for `subject` using `BeautifulSoup`.
     """
     subject_clean = subject.strip().lower().replace(" ", "_")
@@ -103,74 +121,92 @@ def extract_sds(subject: str) -> int:
     # normalise to space for what's to come
     subject = subject.replace("_", " ")
     url = "https://www.vcaa.vic.edu.au/curriculum/vce-curriculum/vce-study-designs/vce-study-designs"
-    headers = {"User-Agent": "Mozilla/5.0"} # Need header to extract from VCAA 
-    
+    headers = {"User-Agent": "Mozilla/5.0"}  # Need header to extract from VCAA
+
     # Get to subject curriculum page
-    html = requests.get(url, headers=headers).text
+    html_resp = await client.get(url, headers=headers)
+    html = html_resp.text
     soup = BeautifulSoup(html, "html.parser")
-    subject_pattern = re.compile(rf"/curriculum/.+/{subject.strip().lower().replace(" ", "-")}/.+")
+    subject_pattern = re.compile(
+        rf"/curriculum/.+/{subject.strip().lower().replace(' ', '-')}/.+"
+    )
 
     try:
         full_url = urljoin(url, soup.find_all("a", href=subject_pattern)[0]["href"])
-    except IndexError: 
-        print(f"Unable to find subject {subject} study design. Make sure it is spelt correctly")
+    except IndexError:
+        print(
+            f"Unable to find subject {subject} study design. Make sure it is spelt correctly"
+        )
         return 0
-    
-    # Extract study design 
-    html = requests.get(full_url, headers=headers).text
+
+    # Extract study design
+    html_resp = await client.get(full_url, headers=headers)
+    html = html_resp.text
     soup = BeautifulSoup(html, "html.parser")
 
-    sd_name = "mathematics" if "mathematic" in subject else subject # math subjects sd have diff naming convention
+    sd_name = (
+        "mathematics" if "mathematic" in subject else subject
+    )  # math subjects sd have diff naming convention
     pattern = re.compile(rf"{sd_name} study design", re.IGNORECASE)
 
     matches = soup.find_all("a", string=pattern, href=True)
-    if not matches: 
-        print(f"Couldn't find any study designs for {subject}. Are you sure it has a study design?")
+    if not matches:
+        print(
+            f"Couldn't find any study designs for {subject}. Are you sure it has a study design?"
+        )
 
+    to_download = []
     for a in matches:
         full_url = urljoin(VCAA_BASE, a["href"])
-        save_path = file_dir / f"{subject.strip().lower().replace(" ", "_")}_sd.docx"
-        if save_path.exists(): # don't re-download if already exists
+        save_path = file_dir / f"{subject.strip().lower().replace(' ', '_')}_sd.docx"
+        if save_path.exists():  # don't re-download if already exists
             return 1
-        
-        resp = requests.get(full_url, headers=headers)
+
+        to_download.append(client.get(full_url, headers=headers))
+
+    res = await asyncio.gather(*to_download)
+    for r in res:
+        save_path = file_dir / f"{subject.strip().lower().replace(' ', '_')}_sd.docx"
         with open(save_path, "wb") as f:
-            f.write(resp.content)
+            f.write(r.content)
 
     return 1
 
 
-def save_link(
+async def save_link(
     soup,
     pattern: str,
     save_dir: str,
+    client: httpx.AsyncClient,
     two_exams: bool = False,
-    headers: str = {"User-Agent": "Mozilla/5.0"}
+    headers: str = {"User-Agent": "Mozilla/5.0"},
 ) -> int:
-    """ Saves an exam/report/study-design contained in `soup`.
-    
+    """Saves an exam/report/study-design contained in `soup`.
+
     Parameters
     ----------
-    soup     : `BeautifulSoup` object for the page to be scraped 
+    soup     : `BeautifulSoup` object for the page to be scraped
     pattern  : Pattern of hypertext we want to scrape from
-    save_dir : Directory the file should be saved in. 
+    save_dir : Directory the file should be saved in.
     two_exams: Does the subject being scraped have two exams?
-    headers  : Headers to use while scraping. 
+    headers  : Headers to use while scraping.
 
-    Returns `0` if no links were found, `1` otherwise. 
+    Returns `0` if no links were found, `1` otherwise.
     """
     links = soup.find_all("a", string=pattern, href=True)
     if not links:
         return 0
-    # Save any links we've scraped 
-    for a in links: 
+    # Save any links we've scraped
+    to_download = []
+    save_paths = []
+    for a in links:
         text = a.get_text(strip=True)
         full_url = urljoin(VCAA_BASE, a["href"])
         numbers = re.findall(r"\d+", text)
-        
+
         year = numbers[0]
         num = numbers[1] if two_exams else None
-        
+
         # Get file extension
         parsed_url = urlparse(full_url)
         ext = Path(parsed_url.path).suffix
@@ -179,39 +215,51 @@ def save_link(
         file_name = f"{year}_{num}{ext}" if two_exams else f"{year}{ext}"
         save_dir.mkdir(parents=True, exist_ok=True)
         save_path = save_dir / file_name
-        if save_path.exists(): # already saved
+        if save_path.exists():  # already saved
             continue
-        # download and save 
-        resp = requests.get(full_url, headers=headers, timeout=10)
+        # download and save
+        to_download.append(client.get(full_url, headers=headers, timeout=10))
+        save_paths.append(save_path)
+
+    res = await asyncio.gather(*to_download)
+    for r, save_path in zip(res, save_paths):
         with open(save_path, "wb") as f:
-            f.write(resp.content)
+            f.write(r.content)
+
     return 1
 
 
-def find_exams_page(subject: str, headers: dict[str, str]) -> str:
-    """ Finds the URL of the exams page for the given subjects."""
+async def find_exams_page(
+    subject: str, headers: dict[str, str], client: httpx.AsyncClient
+) -> str:
+    """Finds the URL of the exams page for the given subjects."""
     # Standardise subject input to "Subject Name".
     subject = subject.lower().replace("_", " ")
-    subject = subject.replace(subject[0], subject[0].upper(), 1)   
+    subject = subject.replace(subject[0], subject[0].upper(), 1)
     if " " in subject:
         idx = subject.index(" ") + 1
-        subject = subject[:idx] + subject[idx].upper() + subject[idx+1:] 
-    
+        subject = subject[:idx] + subject[idx].upper() + subject[idx + 1 :]
+
     # could become function argument if the need arises
-    url = VCAA_BASE + "/assessment/vce/" \
-          "examination-specifications-past-examinations-and-examination-reports/" \
-          "examination-specifications-past-examinations-and-external-assessment-reports" 
-    
+    url = (
+        VCAA_BASE + "/assessment/vce/"
+        "examination-specifications-past-examinations-and-examination-reports/"
+        "examination-specifications-past-examinations-and-external-assessment-reports"
+    )
+
     # ===== START SCRAPING ===== #
     # First, find the subject's exam page
-    html = requests.get(url, headers=headers).text
+    html_resp = await client.get(url, headers=headers)
+    html = html_resp.text
     soup = BeautifulSoup(html, "html.parser")
-    subject_pattern = re.compile(rf"^/assessment/(vce|vet)/.+/{subject.strip().lower().replace(" ", "-")}")
-    
+    subject_pattern = re.compile(
+        rf"^/assessment/(vce|vet)/.+/{subject.strip().lower().replace(' ', '-')}"
+    )
+
     # Try to find the subject's page
     try:
         full_url = urljoin(url, soup.find_all("a", href=subject_pattern)[0]["href"])
-    except IndexError as IE: 
+    except IndexError as IE:
         print(f"Unable to find subject {subject}. Make sure it is spelt correctly.")
         return IE
 
@@ -219,30 +267,32 @@ def find_exams_page(subject: str, headers: dict[str, str]) -> str:
 
 
 def required_years(
-    file_dir: str,
-    years: Sequence[int | str],
-    two_exams: bool = False
+    file_dir: str, years: Sequence[int | str], two_exams: bool = False
 ) -> list[int]:
-    """ Returns the subset of years which have not already been downloaded. 
-    Only cares about years. 
+    """Returns the subset of years which have not already been downloaded.
+    Only cares about years.
     """
     if not len(list(file_dir.iterdir())):
         # we don't have any files in this directory
         return years
     needed_yrs = []
-    for year in years: 
+    for year in years:
         file_base = f"{year}"
         if two_exams:
             file_base_1 = file_base + "_1"
             file_base_2 = file_base + "_2"
-            # Check if we have any matches for this year; skip only if we have both 
+            # Check if we have any matches for this year; skip only if we have both
             # exams for the year
-            should_skip = all(path.stem == file_base_1 or path.stem == file_base_2 \
-                              for path in file_dir.iterdir() if path.is_file())
-        else: 
-            # Only need to check one exam 
-            should_skip = all(path.stem == file_base \
-                              for path in file_dir.iterdir() if path.is_file())
+            should_skip = all(
+                path.stem == file_base_1 or path.stem == file_base_2
+                for path in file_dir.iterdir()
+                if path.is_file()
+            )
+        else:
+            # Only need to check one exam
+            should_skip = all(
+                path.stem == file_base for path in file_dir.iterdir() if path.is_file()
+            )
         if should_skip:
             continue
         needed_yrs.append(year)
@@ -250,30 +300,31 @@ def required_years(
 
 
 def has_two_exams(subject: str) -> bool:
-    """ Finds the number of exams per year for the subject. The only examinations with 
+    """Finds the number of exams per year for the subject. The only examinations with
     two exams are mathematics subjects, and the only mathematics subject with one examination
-    is foundational mathematics. 
+    is foundational mathematics.
     """
-    subject = subject.strip().lower().replace(" ", "_") 
+    subject = subject.strip().lower().replace(" ", "_")
     return "math" in subject and "foundational" not in subject
 
 
-def main(argv: list[str] | None = None) -> int: 
+async def main(argv: list[str] | None = None) -> int:
     argv = argv or sys.argv[1:]
     if not argv or len(argv) > 2:
         print(__doc__)
         return 2
-    
+
     subject, years = argv
     years = years.split(",")
-    
-    if not vcaa_extract_exam_materials(subject, years): 
-        return 1
-    if not extract_sds(subject):
-        return 1
 
-    return 0 
+    async with httpx.AsyncClient() as client:
+        if not await vcaa_extract_exam_materials(subject, client, years):
+            return 1
+        if not await extract_sds(subject, client):
+            return 1
+
+    return 0
 
 
-if __name__ == "__main__": 
-    raise SystemExit(main())
+if __name__ == "__main__":
+    raise (SystemExit(asyncio.run(main())))

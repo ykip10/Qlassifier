@@ -69,5 +69,4 @@ as well as formulating an aggregate difficulty metric for each subject's MCQ sec
 
 - Parsing does not recover LaTeX code. 
 - Cannot parse from scanned PDFs. Text must be embedded. This means 2024 VCAA exams are unparsable. 
-- Parser is not guaranteed to work for all subjects for all years. In particular, it requires at most one MCQ section and at most one short-answer question section. 
-  Subjects with complex section layouts cannot be parsed reliably. 
+- Subjects with complex section layouts cannot be parsed reliably. 
